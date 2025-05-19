@@ -1,0 +1,7 @@
+[DEFAULT]
+
+[DEV]
+SERVER_HOST = "localhost"
+SERVER_PORT = 8000
+
+[PROD]
