@@ -78,7 +78,7 @@ class MigrationManager:
         Returns:
             ModuleType: Module corresponding to given inputs
         """
-        return import_module(f"iems.{module_name}.migrations.{slug}")
+        return import_module(f"cms.{module_name}.migrations.{slug}")
 
     def generate(self, module_name: str, slug: str):
         """
