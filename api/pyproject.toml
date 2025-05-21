@@ -12,8 +12,10 @@ dependencies = [
     "fastapi>=0.115.12",
     "granian>=2.3.1",
     "miniopy-async>=1.23.0",
+    "orjson>=3.10.18",
     "pydantic>=2.11.4",
     "python-dotenv>=1.1.0",
+    "structlog>=25.3.0",
     "uvloop>=0.21.0",
 ]
 
