@@ -9,13 +9,16 @@ authors = [
 requires-python = ">=3.13"
 dependencies = [
     "asyncpg>=0.30.0",
+    "fastapi>=0.115.12",
+    "granian>=2.3.1",
     "miniopy-async>=1.23.0",
     "pydantic>=2.11.4",
     "python-dotenv>=1.1.0",
+    "uvloop>=0.21.0",
 ]
 
 [project.scripts]
-cms = "cms:main"
+server = "cms.app.server:start_server"
 migrations = "cms.utils.migrations:run_cli"
 
 [build-system]
@@ -26,4 +29,9 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = "cms"
 module-root = ""
+
+[dependency-groups]
+dev = [
+    "granian[reload]>=2.3.1",
+]
 
