@@ -14,7 +14,9 @@ class Config(BaseModel):
     POSTGRES_DSN: str
     POSTGRES_MIN_CONNECTIONS: int
     POSTGRES_MAX_CONNECTIONS: int
-
+    MINIO_ADDRESS: str
+    MINIO_ACCESS_KEY: str
+    MINIO_SECRET_KEY: str
     @classmethod
     def load_config(cls):
         load_dotenv("./.env")
