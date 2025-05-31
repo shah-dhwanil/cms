@@ -18,10 +18,12 @@ class PgPool:
         )
 
     @classmethod
-    async def get_connection(cls) -> Connection:
+    async def get_connection(cls):
         if cls.pool is None:
             raise Exception("Pool not initiated")
-        return await cls.pool.acquire()
+        client = await cls.pool.acquire()
+        yield client
+        await cls.pool.release(client)
 
     @classmethod
     async def close(cls):
