@@ -17,6 +17,7 @@ class Config(BaseModel):
     MINIO_ADDRESS: str
     MINIO_ACCESS_KEY: str
     MINIO_SECRET_KEY: str
+    MINIO_SECURE:bool
     @classmethod
     def load_config(cls):
         load_dotenv("./.env")
