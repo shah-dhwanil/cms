@@ -1,0 +1,13 @@
+# Exported from Render on 2025-06-02T13:21:50Z
+services:
+- type: web
+  name: cms
+  runtime: python
+  repo: https://github.com/shah-dhwanil/cms
+  plan: free
+  region: oregon
+  buildCommand: pip install uv && uv sync
+  startCommand: uv run server
+  autoDeployTrigger: commit
+  rootDir: api
+version: "1"
