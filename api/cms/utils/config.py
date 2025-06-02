@@ -17,7 +17,13 @@ class Config(BaseModel):
     MINIO_ADDRESS: str
     MINIO_ACCESS_KEY: str
     MINIO_SECRET_KEY: str
-    MINIO_SECURE:bool
+    MINIO_SECURE: bool
+    ARGON_TIME_COST: int
+    ARGON_MEMORY_COST: int
+    ARGON_PARALLELISM: int
+    ARGON_SALT_LENGTH: int
+    ARGON_HASH_LENGTH: int
+
     @classmethod
     def load_config(cls):
         load_dotenv("./.env")
