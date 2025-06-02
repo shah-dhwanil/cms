@@ -9,6 +9,8 @@ import argparse
 import asyncio
 
 Config.load_config()
+
+
 class MigrationManager:
     POSTGRES_DSN: str = Config.get_config().POSTGRES_DSN
     applied_migrations: Optional[list[str]] = None
@@ -233,6 +235,7 @@ async def main():
         await manager.rollback(args.module, args.slug)
     elif args.command == "apply":
         await manager.apply(args.module, args.slug)
+
 
 def run_cli():
     asyncio.run(main())

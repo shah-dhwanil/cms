@@ -6,7 +6,7 @@ from fastapi import FastAPI
 
 
 @asynccontextmanager
-async def lifespan(app:FastAPI):
+async def lifespan(app: FastAPI):
     Config.load_config()
     setup_logging()
     await PgPool.initiate()

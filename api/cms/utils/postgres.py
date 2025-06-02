@@ -1,5 +1,5 @@
 from typing import ClassVar, Optional
-from asyncpg import Pool, create_pool, Connection
+from asyncpg import Pool, create_pool
 from .config import Config
 
 

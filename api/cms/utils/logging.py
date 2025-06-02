@@ -1,5 +1,4 @@
 from copy import deepcopy
-from typing import Any
 from structlog import configure, BytesLoggerFactory
 from structlog.contextvars import merge_contextvars
 from structlog.processors import (
@@ -18,7 +17,6 @@ __all__ = ["setup_logging"]
 
 
 def setup_logging(*args, **kwargs):
-
     def development_render(_, __, event_dict: EventDict) -> EventDict:
         config = Config.get_config()
         if config.SERVER_ENVIRONMENT == "DEV":
