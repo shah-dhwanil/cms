@@ -3,7 +3,7 @@ from uuid import UUID
 
 from argon2 import PasswordHasher
 from asyncpg import Connection
-from fastapi import Body, Depends, FastAPI, Path, Query, Response, status
+from fastapi import APIRouter, Body, Depends, Path, Query, Response, status
 from uuid_utils.compat import uuid7
 
 from cms.users.exceptions import UserAlreadyExists, UserNotExists
@@ -24,15 +24,14 @@ from cms.users.schemas import (
 from cms.utils.config import Config
 from cms.utils.postgres import PgPool
 
-app = FastAPI(
-    title="Users",
-    version="0.0.1",
+router = APIRouter(
+    prefix="/users",
+    tags=["users"],
 )
 
 
-@app.post(
+@router.post(
     "/",
-    tags=["users"],
     status_code=status.HTTP_201_CREATED,
     responses={
         201: {"model": CreateUserResponse},
@@ -70,9 +69,8 @@ async def create_user(
         return UserAlreadyExistsResponse(context=e.context)
 
 
-@app.get(
+@router.get(
     "/",
-    tags=["users"],
     responses={200: {"model": GetUserResponse}, 404: {"model": UserNotExistsResponse}},
 )
 async def get_user(
@@ -99,9 +97,8 @@ async def get_user(
         return UserNotExistsResponse(context=e.context)
 
 
-@app.patch(
+@router.patch(
     "/{id}",
-    tags=["users"],
     responses={
         200: {"model": UpdateUserResponse},
         404: {"model": UserNotExistsResponse},
@@ -128,9 +125,8 @@ async def update_user(
         return UserNotExistsResponse(context=e.context)
 
 
-@app.patch(
+@router.patch(
     "/{id}/update_password/",
-    tags=["users"],
     responses={
         200: {"model": UpdatePasswordResponse},
         404: {"model": UserNotExistsResponse},
@@ -166,9 +162,8 @@ async def update_password(
         return UserNotExistsResponse(context=e.context)
 
 
-@app.delete(
+@router.delete(
     "/{id}",
-    tags=["users"],
     responses={
         200: {"model": DeleteUserResponse},
         404: {"model": UserNotExistsResponse},

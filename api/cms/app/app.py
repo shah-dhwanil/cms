@@ -1,10 +1,10 @@
 from cms.app.lifespan import lifespan
+from cms.users.views import router as user_router
 from fastapi import FastAPI
 from structlog import get_logger
-from cms.users.views import app as user_app
 
 app = FastAPI(title="College Management System", lifespan=lifespan)
-app.mount("/users", user_app, "Users")
+app.include_router(user_router)
 
 
 @app.get("/")
