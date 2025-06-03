@@ -69,3 +69,21 @@ class UserAlreadyExistsResponse(BaseModel):
     slug: str = UserAlreadyExists.slug
     description: str = UserAlreadyExists.description
     context: dict[str, Any] = Field(examples=[{"identifiers": "id"}])
+
+
+class GrantPermissionsRequest(BaseModel):
+    permissions: list[str]
+
+
+class GrantPermissionsResponse(BaseModel): ...
+
+
+class RevokePermissionsRequest(BaseModel):
+    permissions: list[str]
+
+
+class RevokePermissionsResponse(BaseModel): ...
+
+
+class GetUserPermissionResponse(BaseModel):
+    permissions: list[str]

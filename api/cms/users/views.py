@@ -3,6 +3,10 @@ from uuid import UUID
 
 from argon2 import PasswordHasher
 from asyncpg import Connection
+from cms.permissions.exceptions import PermissionDoesNotExist
+from cms.permissions.schemas import (
+    PermissionDoesNotExistResponse,
+)
 from fastapi import APIRouter, Body, Depends, Path, Query, Response, status
 from uuid_utils.compat import uuid7
 
@@ -12,8 +16,11 @@ from cms.users.schemas import (
     CreateUserRequest,
     CreateUserResponse,
     DeleteUserResponse,
+    GetUserPermissionResponse,
     GetUserRequest,
     GetUserResponse,
+    GrantPermissionsRequest,
+    RevokePermissionsRequest,
     UpdatePasswordRequest,
     UpdatePasswordResponse,
     UpdateUserRequest,
@@ -181,3 +188,59 @@ async def delete_user(
     except UserNotExists as e:
         response.status_code = status.HTTP_404_NOT_FOUND
         return UserNotExistsResponse(context=e.context)
+
+
+@router.post(
+    "/{id}/grant_permissions/",
+    tags=["permissions"],
+    responses={
+        200: {"model": None},
+        400: {"model": PermissionDoesNotExistResponse},
+        404: {"model": UserNotExistsResponse},
+    },
+)
+async def grant_permissions(
+    id: Annotated[UUID, Path()],
+    permissions: Annotated[GrantPermissionsRequest, Body()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    try:
+        await UserRepository.grant_permissions(connection, id, permissions.permissions)
+    except UserNotExists as e:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return UserNotExistsResponse(context=e.context)
+    except PermissionDoesNotExist as e:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return PermissionDoesNotExistResponse(context=e.context)
+    response.status_code = status.HTTP_200_OK
+
+
+@router.post(
+    "/{id}/revoke_permissions/", tags=["permissions"], responses={200: {"model": None}}
+)
+async def revoke_permissions(
+    id: Annotated[UUID, Path()],
+    permissions: Annotated[RevokePermissionsRequest, Body()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    await UserRepository.revoke_permissions(connection, id, permissions.permissions)
+    response.status_code = status.HTTP_200_OK
+
+
+@router.get(
+    "/{id}/permissions/",
+    tags=["permissions"],
+    responses={200: {"model": GetUserPermissionResponse}},
+)
+async def get_permissions(
+    id: Annotated[UUID, Path()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    result = await UserRepository.get_user_permissions(connection, id)
+    response.status_code = status.HTTP_200_OK
+    return GetUserPermissionResponse(
+        permissions=list(map(lambda x: x["permission_name"], result))
+    )

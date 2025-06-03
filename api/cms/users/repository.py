@@ -1,6 +1,7 @@
 from typing import Any, Optional
 from asyncpg import Connection
-from asyncpg.exceptions import UniqueViolationError
+from asyncpg.exceptions import ForeignKeyViolationError, UniqueViolationError
+from cms.permissions.exceptions import PermissionDoesNotExist
 from cms.users.exceptions import UserAlreadyExists, UserNotExists
 from uuid import UUID
 
@@ -103,3 +104,47 @@ class UserRepository:
         )
         if result == "UPDATE 0":
             raise UserNotExists(identifier="id")
+
+    @staticmethod
+    async def grant_permissions(
+        connection: Connection, uid: UUID, permissions: list[str], *args, **kwargs
+    ) -> None:
+        # No need to use transactions as executemany is atomic operation
+        try:
+            await connection.executemany(
+                """
+                INSERT INTO user_permissions (user_id, permission_name)
+                VALUES ($1, $2)
+                ON CONFLICT (user_id, permission_name) DO NOTHING;
+                """,
+                [(uid, permission) for permission in permissions],
+            )
+        except ForeignKeyViolationError as e:
+            if e.as_dict()["constraint_name"] == "fk_user_permissions_permissions":
+                val = e.as_dict()["detail"].split("=")[1].split(")")[0][1::]
+                raise PermissionDoesNotExist({"value": val})
+            else:
+                raise UserNotExists(identifier="id")
+
+    @staticmethod
+    async def revoke_permissions(
+        connection: Connection, uid: UUID, permissions: list[str], *args, **kwargs
+    ) -> None:
+        # No need to use transactions as executemany is atomic operation
+        await connection.executemany(
+            """
+            DELETE FROM user_permissions WHERE user_id = $1 AND permission_name = $2;
+            """,
+            [(uid, permission) for permission in permissions],
+        )
+
+    @staticmethod
+    async def get_user_permissions(
+        connection: Connection, uid: UUID, *args, **kwargs
+    ) -> list[dict[str, Any]]:
+        return await connection.fetch(
+            """--sql
+            SELECT permission_name FROM user_permissions WHERE user_id = $1;
+            """,
+            uid,
+        )
