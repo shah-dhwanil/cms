@@ -1,0 +1,12 @@
+{
+    "permissions":[
+        {
+            "name":"users:create:all",
+            "description":"Can create user"
+        },
+        {
+            "name":"permissions:create:all",
+            "description":"Can create permission"
+        }
+    ]
+}
