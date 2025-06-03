@@ -15,16 +15,13 @@ from cms.users.repository import UserRepository
 from cms.users.schemas import (
     CreateUserRequest,
     CreateUserResponse,
-    DeleteUserResponse,
     GetUserPermissionResponse,
     GetUserRequest,
     GetUserResponse,
     GrantPermissionsRequest,
     RevokePermissionsRequest,
     UpdatePasswordRequest,
-    UpdatePasswordResponse,
     UpdateUserRequest,
-    UpdateUserResponse,
     UserAlreadyExistsResponse,
     UserNotExistsResponse,
 )
@@ -107,7 +104,7 @@ async def get_user(
 @router.patch(
     "/{id}",
     responses={
-        200: {"model": UpdateUserResponse},
+        200: {"model": None},
         404: {"model": UserNotExistsResponse},
     },
 )
@@ -126,7 +123,7 @@ async def update_user(
             profile_image=user.profile_image,
         )
         response.status_code = status.HTTP_200_OK
-        return UpdateUserResponse()
+        return
     except UserNotExists as e:
         response.status_code = status.HTTP_404_NOT_FOUND
         return UserNotExistsResponse(context=e.context)
@@ -135,7 +132,7 @@ async def update_user(
 @router.patch(
     "/{id}/update_password/",
     responses={
-        200: {"model": UpdatePasswordResponse},
+        200: {"model": None},
         404: {"model": UserNotExistsResponse},
     },
 )
@@ -163,7 +160,7 @@ async def update_password(
             profile_image=None,
         )
         response.status_code = status.HTTP_200_OK
-        return UpdatePasswordResponse()
+        return
     except UserNotExists as e:
         response.status_code = status.HTTP_404_NOT_FOUND
         return UserNotExistsResponse(context=e.context)
@@ -172,7 +169,7 @@ async def update_password(
 @router.delete(
     "/{id}",
     responses={
-        200: {"model": DeleteUserResponse},
+        200: {"model": None},
         404: {"model": UserNotExistsResponse},
     },
 )
@@ -184,7 +181,7 @@ async def delete_user(
     try:
         await UserRepository.delete(connection, id)
         response.status_code = status.HTTP_200_OK
-        return DeleteUserResponse()
+        return
     except UserNotExists as e:
         response.status_code = status.HTTP_404_NOT_FOUND
         return UserNotExistsResponse(context=e.context)

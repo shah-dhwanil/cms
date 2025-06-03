@@ -12,24 +12,12 @@ class CreatePermissionRequest(BaseModel):
     description: str
 
 
-class CreatePermissionResponse(BaseModel): ...
-
-
-class GetPermissionRequest(BaseModel): ...
-
-
 class GetPermissionResponse(BaseModel):
     class Permission(BaseModel):
         name: str
         description: str
 
     permissions: list[Permission] = Field(default_factory=list)
-
-
-class DeletePermissionRequest(BaseModel): ...
-
-
-class DeletePermissionResponse(BaseModel): ...
 
 
 class PermissionAlreadyExistsResponse(BaseModel):

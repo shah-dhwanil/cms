@@ -43,20 +43,8 @@ class UpdateUserRequest(BaseModel):
     profile_image: Optional[str] = None
 
 
-class UpdateUserResponse(BaseModel): ...
-
-
 class UpdatePasswordRequest(BaseModel):
     new_password: str
-
-
-class UpdatePasswordResponse(BaseModel): ...
-
-
-class DelteUserRequest(BaseModel): ...
-
-
-class DeleteUserResponse(BaseModel): ...
 
 
 class UserNotExistsResponse(BaseModel):
@@ -75,14 +63,8 @@ class GrantPermissionsRequest(BaseModel):
     permissions: list[str]
 
 
-class GrantPermissionsResponse(BaseModel): ...
-
-
 class RevokePermissionsRequest(BaseModel):
     permissions: list[str]
-
-
-class RevokePermissionsResponse(BaseModel): ...
 
 
 class GetUserPermissionResponse(BaseModel):

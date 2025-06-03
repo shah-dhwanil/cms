@@ -6,8 +6,6 @@ from aiofile import async_open
 
 from cms.permissions.schemas import (
     CreatePermissionRequest,
-    CreatePermissionResponse,
-    DeletePermissionResponse,
     GetPermissionResponse,
     PermissionAlreadyExistsResponse,
     PermissionDoesNotExistResponse,
@@ -27,7 +25,7 @@ router = APIRouter(prefix="/permissions", tags=["permissions"])
     "/",
     status_code=status.HTTP_201_CREATED,
     responses={
-        201: {"model": CreatePermissionResponse},
+        201: {"model": None},
         409: {"model": PermissionAlreadyExistsResponse},
     },
 )
@@ -42,7 +40,7 @@ async def create_permission(
                 connection, permission.name, permission.description
             )
             response.status_code = 201
-            return CreatePermissionResponse()
+            return
         except PermissionAlreadyExists as e:
             response.status_code = 409
             return PermissionAlreadyExistsResponse(context=e.context)
@@ -59,7 +57,7 @@ async def create_permission(
         if i.name not in available_permissions:
             await PermissionRepository.create(connection, i.name, i.description)
     response.status_code = 201
-    return CreatePermissionResponse()
+    return
 
 
 @router.get("/", responses={200: {"model": list[GetPermissionResponse]}})
@@ -82,7 +80,7 @@ async def get_permissions(
 @router.delete(
     "/{permission_name}",
     responses={
-        200: {"model": DeletePermissionResponse},
+        200: {"model": None},
         404: {"model": PermissionDoesNotExistResponse},
         409: {"model": PermissionReferencedResponse},
     },
@@ -95,7 +93,7 @@ async def delete_permission(
     try:
         await PermissionRepository.delete(connection, permission_name)
         response.status_code = status.HTTP_200_OK
-        return DeletePermissionResponse()
+        return
     except PermissionDoesNotExist as e:
         response.status_code = status.HTTP_404_NOT_FOUND
         return PermissionDoesNotExistResponse(context=e.context)

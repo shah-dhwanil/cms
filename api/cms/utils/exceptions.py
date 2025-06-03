@@ -1,7 +1,6 @@
 from typing import Any, ClassVar
 
 
-
 class BaseException(Exception):
     slug: ClassVar[str]
     description: ClassVar[str]
