@@ -59,6 +59,30 @@
         {
             "name":"session:terminate:any",
             "description":"Terminate session of any user"
+        },
+        {
+            "name":"student:create:any",
+            "description":"Create Student"
+        },
+        {
+            "name":"student:read:self",
+            "description":"Access their own data"
+        },
+        {
+            "name":"student:read:any",
+            "description": "Access any student data"
+        },
+        {
+            "name":"student:update:self",
+            "description": "Update own data"
+        },
+        {
+            "name":"student:update:any",
+            "description": "Update any student data"
+        },
+        {
+            "name":"student:delete:any",
+            "description":"Delete any student"
         }
     ]
 }
