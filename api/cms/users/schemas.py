@@ -2,9 +2,9 @@ from typing import Any, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
-
-from cms.users.exceptions import UserAlreadyExists, UserNotExists
 from pydantic.functional_validators import model_validator
+
+from cms.users.exceptions import UserAlreadyExists, UserDoesNotExists
 
 
 class CreateUserRequest(BaseModel):
@@ -47,9 +47,9 @@ class UpdatePasswordRequest(BaseModel):
     new_password: str
 
 
-class UserNotExistsResponse(BaseModel):
-    slug: str = UserNotExists.slug
-    description: str = UserNotExists.description
+class UserDoesNotExistsResponse(BaseModel):
+    slug: str = UserDoesNotExists.slug
+    description: str = UserDoesNotExists.description
     context: dict[str, Any] = Field(examples=[{"identifiers": "id"}])
 
 

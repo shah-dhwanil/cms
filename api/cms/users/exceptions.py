@@ -9,7 +9,7 @@ class UserAlreadyExists(BaseException):
         super().__init__({"identifier": identifier, **kwargs}, *args)
 
 
-class UserNotExists(BaseException):
+class UserDoesNotExists(BaseException):
     slug = "user_does_not_exists"
     description = "User with given identifier does not exists."
 

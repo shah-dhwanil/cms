@@ -3,16 +3,17 @@ from uuid import UUID
 
 from argon2 import PasswordHasher
 from asyncpg import Connection
+from fastapi import APIRouter, Body, Depends, Path, Query, Response, status
+from uuid_utils.compat import uuid7
+
+from cms.auth.dependency import PermissionRequired, get_user_id
 from cms.auth.exceptions import NotEnoughPermissions
 from cms.auth.schemas import CredentialsNotFoundResponse, NotAuthorizedResponse
 from cms.permissions.exceptions import PermissionDoesNotExist
 from cms.permissions.schemas import (
     PermissionDoesNotExistResponse,
 )
-from fastapi import APIRouter, Body, Depends, Path, Query, Response, status
-from uuid_utils.compat import uuid7
-
-from cms.users.exceptions import UserAlreadyExists, UserNotExists
+from cms.users.exceptions import UserAlreadyExists, UserDoesNotExists
 from cms.users.repository import UserRepository
 from cms.users.schemas import (
     CreateUserRequest,
@@ -25,9 +26,8 @@ from cms.users.schemas import (
     UpdatePasswordRequest,
     UpdateUserRequest,
     UserAlreadyExistsResponse,
-    UserNotExistsResponse,
+    UserDoesNotExistsResponse,
 )
-from cms.auth.dependency import PermissionRequired, get_user_id
 from cms.utils.config import Config
 from cms.utils.postgres import PgPool
 
@@ -83,7 +83,10 @@ async def create_user(
 
 @router.get(
     "/",
-    responses={200: {"model": GetUserResponse}, 404: {"model": UserNotExistsResponse}},
+    responses={
+        200: {"model": GetUserResponse},
+        404: {"model": UserDoesNotExistsResponse},
+    },
 )
 async def get_user(
     user: Annotated[GetUserRequest, Query()],
@@ -110,16 +113,16 @@ async def get_user(
             contact_no=result["contact_no"],
             profile_image=result["profile_image"],
         )
-    except UserNotExists as e:
+    except UserDoesNotExists as e:
         response.status_code = status.HTTP_404_NOT_FOUND
-        return UserNotExistsResponse(context=e.context)
+        return UserDoesNotExistsResponse(context=e.context)
 
 
 @router.patch(
     "/{id}",
     responses={
         200: {"model": None},
-        404: {"model": UserNotExistsResponse},
+        404: {"model": UserDoesNotExistsResponse},
     },
 )
 async def update_user(
@@ -145,16 +148,16 @@ async def update_user(
         )
         response.status_code = status.HTTP_200_OK
         return
-    except UserNotExists as e:
+    except UserDoesNotExists as e:
         response.status_code = status.HTTP_404_NOT_FOUND
-        return UserNotExistsResponse(context=e.context)
+        return UserDoesNotExistsResponse(context=e.context)
 
 
 @router.patch(
     "/{id}/update_password/",
     responses={
         200: {"model": None},
-        404: {"model": UserNotExistsResponse},
+        404: {"model": UserDoesNotExistsResponse},
     },
 )
 async def update_password(
@@ -189,9 +192,9 @@ async def update_password(
         )
         response.status_code = status.HTTP_200_OK
         return
-    except UserNotExists as e:
+    except UserDoesNotExists as e:
         response.status_code = status.HTTP_404_NOT_FOUND
-        return UserNotExistsResponse(context=e.context)
+        return UserDoesNotExistsResponse(context=e.context)
 
 
 @router.delete(
@@ -199,7 +202,7 @@ async def update_password(
     dependencies=[Depends(PermissionRequired(["users:delete:any"]))],
     responses={
         200: {"model": None},
-        404: {"model": UserNotExistsResponse},
+        404: {"model": UserDoesNotExistsResponse},
     },
 )
 async def delete_user(
@@ -211,9 +214,9 @@ async def delete_user(
         await UserRepository.delete(connection, id)
         response.status_code = status.HTTP_200_OK
         return
-    except UserNotExists as e:
+    except UserDoesNotExists as e:
         response.status_code = status.HTTP_404_NOT_FOUND
-        return UserNotExistsResponse(context=e.context)
+        return UserDoesNotExistsResponse(context=e.context)
 
 
 @router.post(
@@ -223,7 +226,7 @@ async def delete_user(
     responses={
         200: {"model": None},
         400: {"model": PermissionDoesNotExistResponse},
-        404: {"model": UserNotExistsResponse},
+        404: {"model": UserDoesNotExistsResponse},
     },
 )
 async def grant_permissions(
@@ -234,9 +237,9 @@ async def grant_permissions(
 ):
     try:
         await UserRepository.grant_permissions(connection, id, permissions.permissions)
-    except UserNotExists as e:
+    except UserDoesNotExists as e:
         response.status_code = status.HTTP_404_NOT_FOUND
-        return UserNotExistsResponse(context=e.context)
+        return UserDoesNotExistsResponse(context=e.context)
     except PermissionDoesNotExist as e:
         response.status_code = status.HTTP_400_BAD_REQUEST
         return PermissionDoesNotExistResponse(context=e.context)

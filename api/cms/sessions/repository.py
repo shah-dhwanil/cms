@@ -1,10 +1,11 @@
 from typing import Any, Optional
-from asyncpg import Connection
 from uuid import UUID
 
+from asyncpg import Connection
 from asyncpg.exceptions import ForeignKeyViolationError
+
 from cms.sessions.exceptions import SessionDoesNotExists
-from cms.users.exceptions import UserNotExists
+from cms.users.exceptions import UserDoesNotExists
 
 
 class SessionRepository:
@@ -24,7 +25,7 @@ class SessionRepository:
             )
             return UUID(str(session_id))
         except ForeignKeyViolationError:
-            raise UserNotExists(identifier="user_id")
+            raise UserDoesNotExists(identifier="user_id")
 
     @staticmethod
     async def get_all_sessions(

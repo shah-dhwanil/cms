@@ -1,21 +1,21 @@
 from typing import Annotated
-from cms.auth.dependency import get_session_id
-from cms.auth.schemas import CredentialsNotFoundResponse, LoginRequest, LoginResponse
-from cms.utils.postgres import PgPool
-from cms.users.repository import UserRepository
-from cms.users.exceptions import UserNotExists
-from cms.users.schemas import UserNotExistsResponse
-from cms.sessions.repository import SessionRepository
-from cms.sessions.exceptions import SessionDoesNotExists
-from cms.sessions.schemas import SessionDoesNotExistsResponse
-from cms.utils.config import Config
-from asyncpg import Connection
 from uuid import UUID
-
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
+from asyncpg import Connection
 from fastapi import APIRouter, Body, Depends, Response, status
+
+from cms.auth.dependency import get_session_id
+from cms.auth.schemas import CredentialsNotFoundResponse, LoginRequest, LoginResponse
+from cms.sessions.exceptions import SessionDoesNotExists
+from cms.sessions.repository import SessionRepository
+from cms.sessions.schemas import SessionDoesNotExistsResponse
+from cms.users.exceptions import UserDoesNotExists
+from cms.users.repository import UserRepository
+from cms.users.schemas import UserDoesNotExistsResponse
+from cms.utils.config import Config
+from cms.utils.postgres import PgPool
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -24,7 +24,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
     "/login",
     responses={
         200: {"model": LoginResponse},
-        404: {"model": UserNotExistsResponse},
+        404: {"model": UserDoesNotExistsResponse},
         403: {"model": SessionDoesNotExistsResponse},
     },
 )
@@ -35,9 +35,9 @@ async def login(
 ):
     try:
         result = await UserRepository.get_by_email_id(connection, user.email_id)
-    except UserNotExists as e:
+    except UserDoesNotExists as e:
         response.status_code = status.HTTP_404_NOT_FOUND
-        return UserNotExistsResponse(context=e.context)
+        return UserDoesNotExistsResponse(context=e.context)
     config = Config.get_config()
     argon2 = PasswordHasher(
         time_cost=config.ARGON_TIME_COST,

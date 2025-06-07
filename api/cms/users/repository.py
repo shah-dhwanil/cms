@@ -1,9 +1,11 @@
 from typing import Any, Optional
+from uuid import UUID
+
 from asyncpg import Connection
 from asyncpg.exceptions import ForeignKeyViolationError, UniqueViolationError
+
 from cms.permissions.exceptions import PermissionDoesNotExist
-from cms.users.exceptions import UserAlreadyExists, UserNotExists
-from uuid import UUID
+from cms.users.exceptions import UserAlreadyExists, UserDoesNotExists
 
 
 class UserRepository:
@@ -50,7 +52,7 @@ class UserRepository:
             uid,
         )
         if result is None:
-            raise UserNotExists(identifier="id")
+            raise UserDoesNotExists(identifier="id")
         return result
 
     @staticmethod
@@ -64,7 +66,7 @@ class UserRepository:
             email_id,
         )
         if result is None:
-            raise UserNotExists(identifier="email_id")
+            raise UserDoesNotExists(identifier="email_id")
         return result
 
     @staticmethod
@@ -92,7 +94,7 @@ class UserRepository:
             uid,
         )
         if result == "UPDATE 0":
-            raise UserNotExists(identifier="id")
+            raise UserDoesNotExists(identifier="id")
 
     @staticmethod
     async def delete(connection: Connection, uid: UUID, *args, **kwargs) -> None:
@@ -103,7 +105,7 @@ class UserRepository:
             uid,
         )
         if result == "UPDATE 0":
-            raise UserNotExists(identifier="id")
+            raise UserDoesNotExists(identifier="id")
 
     @staticmethod
     async def grant_permissions(
@@ -124,7 +126,7 @@ class UserRepository:
                 val = e.as_dict()["detail"].split("=")[1].split(")")[0][1::]
                 raise PermissionDoesNotExist({"value": val})
             else:
-                raise UserNotExists(identifier="id")
+                raise UserDoesNotExists(identifier="id")
 
     @staticmethod
     async def revoke_permissions(

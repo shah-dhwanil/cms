@@ -14,8 +14,8 @@ apply = [
         active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT now(),
         CONSTRAINT pk_users PRIMARY KEY (id),
-        CONSTRAINT uq_users_email_id UNIQUE (email_id),
-        CONSTRAINT uq_users_contact_no UNIQUE (contact_no)
+        CONSTRAINT uniq_users_email_id UNIQUE (email_id),
+        CONSTRAINT uniq_users_contact_no UNIQUE (contact_no)
     );
     """
 ]

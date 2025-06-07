@@ -1,13 +1,13 @@
 from typing import Annotated, Optional
 from uuid import UUID
+
 from asyncpg import Connection, Path
+from fastapi import APIRouter, Body, Depends, Query, Response, status
+
 from cms.auth.dependency import PermissionRequired
 from cms.auth.exceptions import NotEnoughPermissions
 from cms.auth.schemas import CredentialsNotFoundResponse, NotAuthorizedResponse
 from cms.sessions.exceptions import SessionDoesNotExists
-from cms.users.schemas import UserNotExistsResponse
-from cms.users.exceptions import UserNotExists
-from cms.utils.postgres import PgPool
 from cms.sessions.repository import SessionRepository
 from cms.sessions.schemas import (
     CreateSessionRequest,
@@ -15,7 +15,9 @@ from cms.sessions.schemas import (
     GetSessionResponse,
     SessionDoesNotExistsResponse,
 )
-from fastapi import APIRouter, Body, Depends, Query, Response, status
+from cms.users.exceptions import UserDoesNotExists
+from cms.users.schemas import UserDoesNotExistsResponse
+from cms.utils.postgres import PgPool
 
 router = APIRouter(
     prefix="/session",
@@ -33,7 +35,7 @@ router = APIRouter(
     dependencies=[Depends(PermissionRequired(["session:create:any"]))],
     responses={
         201: {"model": CreateSessionsResponse},
-        404: {"model": UserNotExistsResponse},
+        404: {"model": UserDoesNotExistsResponse},
     },
 )
 async def create_session(
@@ -45,9 +47,9 @@ async def create_session(
         session_id = await SessionRepository.create_session(connection, user.user_id)
         response.status_code = status.HTTP_201_CREATED
         return CreateSessionsResponse(session_id=session_id)
-    except UserNotExists as e:
+    except UserDoesNotExists as e:
         response.status_code = status.HTTP_404_NOT_FOUND
-        return UserNotExistsResponse(context=e.context)
+        return UserDoesNotExistsResponse(context=e.context)
 
 
 @router.get(
