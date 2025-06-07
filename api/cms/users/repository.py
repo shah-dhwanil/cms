@@ -38,8 +38,15 @@ class UserRepository:
                 contact_no,
                 profile_image,
             )
-        except UniqueViolationError:
-            raise UserAlreadyExists(identifier="email_id")
+        except UniqueViolationError as e:
+            details = e.as_dict()
+            match details["constraint_name"]:
+                case "uniq_users_email_id":
+                    raise UserAlreadyExists(identifier="email_id")
+                case "uniq_users_contact_no":
+                    raise UserAlreadyExists(identifier="contact_no")
+                case _:
+                    raise UserAlreadyExists(identifier="unkown")
 
     @staticmethod
     async def get_by_id(
