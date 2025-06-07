@@ -57,8 +57,8 @@
             "description":"Access data of all sessions"
         },
         {
-            "name":"session:revoke:any",
-            "description":"Revoke session of any user"
+            "name":"session:terminate:any",
+            "description":"Terminate session of any user"
         }
     ]
 }

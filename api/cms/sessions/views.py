@@ -78,7 +78,7 @@ async def get_session(
                     user_id=session["user_id"],
                     created_at=str(session["created_at"]),
                     expires_at=str(session["expires_at"]),
-                    revoked=session["revoked"],
+                    terminated=session["terminated"],
                 )
             )
         except SessionDoesNotExists as e:
@@ -93,7 +93,7 @@ async def get_session(
                     user_id=x["user_id"],
                     created_at=str(x["created_at"]),
                     expires_at=str(x["expires_at"]),
-                    revoked=x["revoked"],
+                    terminated=x["terminated"],
                 ),
                 sessions,
             )
@@ -103,17 +103,17 @@ async def get_session(
 
 
 @router.post(
-    "/{session_id}/revoke",
-    dependencies=[Depends(PermissionRequired(["session:revoke:any"]))],
+    "/{session_id}/terminate",
+    dependencies=[Depends(PermissionRequired(["session:terminate:any"]))],
     responses={200: {"model": None}, 404: {"model": SessionDoesNotExistsResponse}},
 )
-async def revoke_session(
+async def terminate_session(
     session_id: Annotated[UUID, Path()],
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
     response: Response,
 ):
     try:
-        await SessionRepository.revoke_session(connection, session_id)
+        await SessionRepository.terminate_session(connection, session_id)
         response.status_code = status.HTTP_200_OK
         return
     except SessionDoesNotExists as e:

@@ -9,7 +9,7 @@ apply = [
         user_id UUID NOT NULL,
         created_at TIMESTAMP DEFAULT now(),
         expires_at TIMESTAMP DEFAULT (now() + INTERVAL '15 minutes'),
-        revoked boolean DEFAULT false,
+        terminated boolean DEFAULT false,
         CONSTRAINT pk_sessions PRIMARY KEY (id),
         CONSTRAINT fk_sessions_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );

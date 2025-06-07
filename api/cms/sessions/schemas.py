@@ -16,7 +16,7 @@ class GetSessionResponse(BaseModel):
     user_id: UUID
     created_at: str
     expires_at: str
-    revoked: bool
+    terminated: bool
 
 
 class SessionDoesNotExistsResponse(BaseModel):

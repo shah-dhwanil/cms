@@ -32,7 +32,7 @@ class SessionRepository:
     ) -> list[dict[str, Any]]:
         sessions = await conn.fetch(
             """
-            SELECT id,user_id,created_at,expires_at,revoked
+            SELECT id,user_id,created_at,expires_at,terminated
             FROM sessions;
             """
         )
@@ -42,7 +42,7 @@ class SessionRepository:
     async def get_session(conn: Connection, session_id: UUID) -> dict[str, Any]:
         session = await conn.fetchrow(
             """
-            SELECT id,user_id,created_at,expires_at,revoked
+            SELECT id,user_id,created_at,expires_at,terminated
             FROM sessions
             WHERE id = $1;
             """,
@@ -58,18 +58,18 @@ class SessionRepository:
             """
             SELECT user_id
             FROM sessions
-            WHERE id = $1 AND expires_at > NOW() AND revoked = FALSE;
+            WHERE id = $1 AND expires_at > NOW() AND terminated = FALSE;
             """,
             session_id,
         )
         return user_id
 
     @staticmethod
-    async def revoke_session(conn: Connection, session_id: UUID) -> None:
+    async def terminate_session(conn: Connection, session_id: UUID) -> None:
         result = await conn.execute(
             """
             UPDATE sessions
-            SET revoked = TRUE
+            SET terminated = TRUE
             WHERE id = $1;
             """,
             session_id,

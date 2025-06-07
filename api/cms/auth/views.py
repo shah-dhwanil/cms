@@ -68,7 +68,7 @@ async def logout(
     response: Response,
 ):
     try:
-        await SessionRepository.revoke_session(connection, session_id)
+        await SessionRepository.terminate_session(connection, session_id)
     except SessionDoesNotExists as e:
         response.status_code = status.HTTP_404_NOT_FOUND
         return SessionDoesNotExistsResponse(context=e.context)
