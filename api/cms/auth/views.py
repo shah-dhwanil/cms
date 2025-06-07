@@ -1,6 +1,6 @@
 from typing import Annotated
 from cms.auth.dependency import get_session_id
-from cms.auth.schemas import LoginRequest, LoginResponse
+from cms.auth.schemas import CredentialsNotFoundResponse, LoginRequest, LoginResponse
 from cms.utils.postgres import PgPool
 from cms.users.repository import UserRepository
 from cms.users.exceptions import UserNotExists
@@ -56,7 +56,11 @@ async def login(
 
 @router.post(
     "/logout",
-    responses={200: {"model": None}, 404: {"model": SessionDoesNotExistsResponse}},
+    responses={
+        200: {"model": None},
+        401: {"model": CredentialsNotFoundResponse},
+        404: {"model": SessionDoesNotExistsResponse},
+    },
 )
 async def logout(
     session_id: Annotated[UUID, Depends(get_session_id)],

@@ -1,12 +1,64 @@
 {
     "permissions":[
         {
-            "name":"users:create:all",
-            "description":"Can create user"
+            "name":"users:create:any",
+            "description":"Create User"
         },
         {
-            "name":"permissions:create:all",
-            "description":"Can create permission"
+            "name":"users:read:self",
+            "description":"Access their own data"
+        },
+        {
+            "name":"users:read:any",
+            "description": "Access any users data"
+        },
+        {
+            "name":"users:update:self",
+            "description": "Update own data"
+        },
+        {
+            "name":"users:update:any",
+            "description": "Update any users data"
+        },
+        {
+            "name":"users:delete:any",
+            "description":"Delete any User"
+        },
+        {
+            "name":"permissions:create:any",
+            "description":"Create Permission"
+        },
+        {
+            "name":"permissions:read:any",
+            "description":"Read all permissions"
+        },
+        {
+            "name":"permissions:delete:any",
+            "description":"Delete permissions"
+        },
+        {
+            "name":"permissions:grant:any",
+            "description":"Grant Permissions to any user"
+        },
+        {
+            "name":"permissions:revoke:any",
+            "description":"Revoke permission of any user"
+        },
+        {
+            "name":"session:create:any",
+            "description":"Create Sessions"
+        },
+        {
+            "name":"session:read:any",
+            "description":"Access data of any session"
+        },
+        {
+            "name":"session:read:all",
+            "description":"Access data of all sessions"
+        },
+        {
+            "name":"session:revoke:any",
+            "description":"Revoke session of any user"
         }
     ]
 }

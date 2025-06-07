@@ -148,22 +148,3 @@ class UserRepository:
             """,
             uid,
         )
-
-    @staticmethod
-    async def user_has_permissions(
-        connection: Connection, uid: UUID, permissions: list[str], *args, **kwargs
-    ) -> bool:
-        result = await connection.fetchval(
-        """
-        SELECT 
-            CASE 
-                WHEN COUNT(*) = $2 THEN true 
-                ELSE false 
-            END as has_all_permissions
-        FROM user_permissions 
-        WHERE user_id = $1 
-            AND permission_name = ANY($3);
-        """,
-        uid,len(permissions),permissions
-        )
-        return bool(result)

@@ -1,6 +1,10 @@
 from typing import Annotated, Optional
 from uuid import UUID
-from cms.auth.exceptions import CredentialsNotFound, NotEnoughPermissions, SessionInvalidOrExpired
+from cms.auth.exceptions import (
+    CredentialsNotFound,
+    NotEnoughPermissions,
+    SessionInvalidOrExpired,
+)
 from cms.users.repository import UserRepository
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from cms.utils.postgres import PgPool
@@ -23,21 +27,35 @@ async def get_session_id(
     return session_id
 
 
-async def requires_active_session(
+async def get_user_id(
     session_id: Annotated[UUID, Depends(get_session_id)],
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
 ) -> UUID:
-    print("Dependency called!!!")
     result = await SessionRepository.verify_session(connection, session_id)
     if result is None:
+        await connection.close()
         raise SessionInvalidOrExpired()
     return result
 
-class PermissionRequired():
-    def __init__(self, permissions: list[str]):
+
+class PermissionRequired:
+    def __init__(self, *permissions: list[str]):
         self.permissions = permissions
-    
-    async def __call__(self, connection:Annotated[Connection,Depends(PgPool.get_connection)],user_id:Annotated[UUID,Depends(requires_active_session)]):
-        result = await UserRepository.user_has_permissions(connection,user_id,self.permissions)
-        if not result:
-            raise NotEnoughPermissions()
+
+    async def __call__(
+        self,
+        user_id: Annotated[UUID, Depends(get_user_id)],
+        connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    ) -> list[str]:
+        user_permissions = list(
+            map(
+                lambda perm: perm["permission_name"],
+                await UserRepository.get_user_permissions(connection, user_id),
+            )
+        )
+        for permissions in self.permissions:
+            result = all(map(lambda perm: perm in user_permissions, permissions))
+            if result:
+                return permissions
+        await connection.close()
+        raise NotEnoughPermissions()

@@ -3,6 +3,8 @@ from uuid import UUID
 
 from argon2 import PasswordHasher
 from asyncpg import Connection
+from cms.auth.exceptions import NotEnoughPermissions
+from cms.auth.schemas import CredentialsNotFoundResponse, NotAuthorizedResponse
 from cms.permissions.exceptions import PermissionDoesNotExist
 from cms.permissions.schemas import (
     PermissionDoesNotExistResponse,
@@ -25,17 +27,23 @@ from cms.users.schemas import (
     UserAlreadyExistsResponse,
     UserNotExistsResponse,
 )
+from cms.auth.dependency import PermissionRequired, get_user_id
 from cms.utils.config import Config
 from cms.utils.postgres import PgPool
 
 router = APIRouter(
     prefix="/users",
     tags=["users"],
+    responses={
+        401: {"model": CredentialsNotFoundResponse},
+        403: {"model": NotAuthorizedResponse},
+    },
 )
 
 
 @router.post(
     "/",
+    dependencies=[Depends(PermissionRequired(["users:create:any"]))],
     status_code=status.HTTP_201_CREATED,
     responses={
         201: {"model": CreateUserResponse},
@@ -79,9 +87,15 @@ async def create_user(
 )
 async def get_user(
     user: Annotated[GetUserRequest, Query()],
+    user_permission: Annotated[
+        list[str], Depends(PermissionRequired(["users:read:any"], ["users:read:self"]))
+    ],
+    user_id: Annotated[UUID, Depends(get_user_id)],
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
     response: Response,
 ):
+    if "users:read:self" in user_permission and user.id != user_id:
+        raise NotEnoughPermissions()
     try:
         if user.email_id is not None:
             result = await UserRepository.get_by_email_id(connection, user.email_id)
@@ -111,9 +125,16 @@ async def get_user(
 async def update_user(
     id: Annotated[UUID, Path()],
     user: Annotated[UpdateUserRequest, Body()],
+    user_permission: Annotated[
+        list[str],
+        Depends(PermissionRequired(["users:update:any"], ["users:update:self"])),
+    ],
+    user_id: Annotated[UUID, Depends(get_user_id)],
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
     response: Response,
 ):
+    if "users:update:self" in user_permission and id != user_id:
+        raise NotEnoughPermissions()
     try:
         await UserRepository.update(
             connection,
@@ -139,9 +160,16 @@ async def update_user(
 async def update_password(
     id: Annotated[UUID, Path()],
     user: Annotated[UpdatePasswordRequest, Body()],
+    user_id: Annotated[UUID, Depends(get_user_id)],
+    user_permission: Annotated[
+        list[str],
+        Depends(PermissionRequired(["users:update:any"], ["users:update:self"])),
+    ],
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
     response: Response,
 ):
+    if "users:update:self" in user_permission and id != user_id:
+        raise NotEnoughPermissions()
     config = Config.get_config()
     argon2 = PasswordHasher(
         time_cost=config.ARGON_TIME_COST,
@@ -168,6 +196,7 @@ async def update_password(
 
 @router.delete(
     "/{id}",
+    dependencies=[Depends(PermissionRequired(["users:delete:any"]))],
     responses={
         200: {"model": None},
         404: {"model": UserNotExistsResponse},
@@ -189,6 +218,7 @@ async def delete_user(
 
 @router.post(
     "/{id}/grant_permissions/",
+    dependencies=[Depends(PermissionRequired(["permissions:grant:any"]))],
     tags=["permissions"],
     responses={
         200: {"model": None},
@@ -214,7 +244,10 @@ async def grant_permissions(
 
 
 @router.post(
-    "/{id}/revoke_permissions/", tags=["permissions"], responses={200: {"model": None}}
+    "/{id}/revoke_permissions/",
+    dependencies=[Depends(PermissionRequired(["permissions:revoke:any"]))],
+    tags=["permissions"],
+    responses={200: {"model": None}},
 )
 async def revoke_permissions(
     id: Annotated[UUID, Path()],
@@ -233,9 +266,21 @@ async def revoke_permissions(
 )
 async def get_permissions(
     id: Annotated[UUID, Path()],
+    user_permission: Annotated[
+        list[str],
+        Depends(
+            PermissionRequired(
+                ["users:read:any", "permissions:read:any"],
+                ["users:read:self", "permissions:read:any"],
+            )
+        ),
+    ],
+    user_id: Annotated[UUID, Depends(get_user_id)],
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
     response: Response,
 ):
+    if "users:read:self" in user_permission and id != user_id:
+        raise NotEnoughPermissions()
     result = await UserRepository.get_user_permissions(connection, id)
     response.status_code = status.HTTP_200_OK
     return GetUserPermissionResponse(

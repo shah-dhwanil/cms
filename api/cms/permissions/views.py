@@ -1,8 +1,9 @@
-from typing import Annotated, Optional
+from typing import Annotated
 from asyncpg import Connection, Path
+from cms.auth.dependency import PermissionRequired
+from cms.auth.schemas import CredentialsNotFoundResponse, NotAuthorizedResponse
 from cms.utils.postgres import PgPool
 from fastapi import APIRouter, Body, Depends, Response, status
-from aiofile import async_open
 
 from cms.permissions.schemas import (
     CreatePermissionRequest,
@@ -18,49 +19,46 @@ from cms.permissions.exceptions import (
 )
 from cms.permissions.repository import PermissionRepository
 
-router = APIRouter(prefix="/permissions", tags=["permissions"])
+router = APIRouter(
+    prefix="/permissions",
+    tags=["permissions"],
+    responses={
+        401: {"model": CredentialsNotFoundResponse},
+        403: {"model": NotAuthorizedResponse},
+    },
+)
 
 
 @router.post(
     "/",
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(PermissionRequired(["permissions:create:any"]))],
     responses={
         201: {"model": None},
         409: {"model": PermissionAlreadyExistsResponse},
     },
 )
 async def create_permission(
+    permission: Annotated[CreatePermissionRequest, Body()],
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
     response: Response,
-    permission: Annotated[Optional[CreatePermissionRequest], Body()] = None,
 ):
-    if permission is not None:
-        try:
-            await PermissionRepository.create(
-                connection, permission.name, permission.description
-            )
-            response.status_code = 201
-            return
-        except PermissionAlreadyExists as e:
-            response.status_code = 409
-            return PermissionAlreadyExistsResponse(context=e.context)
-
-    available_permissions = set(
-        map(
-            lambda permission: permission["name"],
-            await PermissionRepository.get_all(connection),
+    try:
+        await PermissionRepository.create(
+            connection, permission.name, permission.description
         )
-    )
-    async with async_open("./cms/permissions/permissions.json", "r") as fp:
-        default_permission = GetPermissionResponse.model_validate_json(await fp.read())
-    for i in default_permission.permissions:
-        if i.name not in available_permissions:
-            await PermissionRepository.create(connection, i.name, i.description)
-    response.status_code = 201
-    return
+        response.status_code = 201
+        return
+    except PermissionAlreadyExists as e:
+        response.status_code = 409
+        return PermissionAlreadyExistsResponse(context=e.context)
 
 
-@router.get("/", responses={200: {"model": list[GetPermissionResponse]}})
+@router.get(
+    "/",
+    dependencies=[Depends(PermissionRequired(["permissions:read:any"]))],
+    responses={200: {"model": list[GetPermissionResponse]}},
+)
 async def get_permissions(
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
 ):
@@ -79,6 +77,7 @@ async def get_permissions(
 
 @router.delete(
     "/{permission_name}",
+    dependencies=[Depends(PermissionRequired(["permissions:delete:any"]))],
     responses={
         200: {"model": None},
         404: {"model": PermissionDoesNotExistResponse},
