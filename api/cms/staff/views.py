@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 from asyncpg import Connection, Path
-from cms.auth.exceptions import NotAuthorized
+from cms.auth.exceptions import NotEnoughPermissions
 from fastapi import APIRouter, Body, Depends, Response, status
 from cms.utils.postgres import PgPool
 from cms.users.exceptions import UserDoesNotExists
@@ -115,7 +115,7 @@ async def get_staff_details(
     response: Response,
 ):
     if "staff:read:self" in user_permission and id != user_id:
-        raise NotAuthorized()
+        raise NotEnoughPermissions()
     try:
         result = await StaffRepository.get_by_id(connection, id)
         if (
@@ -123,7 +123,7 @@ async def get_staff_details(
             and not result["public"]
             and not result["active"]
         ):
-            raise NotAuthorized()
+            raise NotEnoughPermissions()
         response.status_code = status.HTTP_200_OK
         return GetStaffResponse(
             user_id=result["id"],
@@ -162,7 +162,7 @@ async def update_staff(
 ):
     print(staff)
     if "staff:update:self" in user_permission and id != user_id:
-        raise NotAuthorized()
+        raise NotEnoughPermissions()
     try:
         await StaffRepository.update(
             connection,
