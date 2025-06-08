@@ -1,6 +1,8 @@
 from typing import Annotated
 from uuid import UUID
 from cms.auth.exceptions import NotEnoughPermissions
+from cms.parents.exceptions import ParentDoesNotExists
+from cms.parents.schemas import ParentDoesNotExistsResponse
 from fastapi import APIRouter, Body, Depends, Response, status
 from cms.auth.schemas import CredentialsNotFoundResponse, NotAuthorizedResponse
 from cms.students.exceptions import StudentAlreadyExists, StudentDoesNotExists
@@ -8,6 +10,7 @@ from cms.users.exceptions import UserDoesNotExists
 from cms.users.schemas import UserDoesNotExistsResponse
 from cms.students.schemas import (
     CreateStudentRequest,
+    GetParentResponse,
     GetStudentResponse,
     UpdateStudentRequest,
     StudentAlreadyExistsResponse,
@@ -181,3 +184,35 @@ async def delete_student(
     except StudentDoesNotExists as e:
         response.status_code = status.HTTP_404_NOT_FOUND
         return StudentDoesNotExistsResponse(context=e.context)
+
+
+@router.get(
+    "/{id}/parents",
+    responses={
+        200: {"model": GetParentResponse},
+        404: {"model": ParentDoesNotExistsResponse},
+    },
+)
+async def get_parent(
+    id: Annotated[UUID, Path()],
+    user_permission: Annotated[
+        list[str],
+        Depends(PermissionRequired(["parents:read:any"], ["parents:read:self"])),
+    ],
+    user_id: Annotated[UUID, Depends(get_user_id)],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    if "parents:read:self" in user_permission and id != user_id:
+        raise NotEnoughPermissions()
+    try:
+        result = await StudentRepository.get_parent(connection, id)
+        response.status_code = status.HTTP_200_OK
+        return GetParentResponse(
+            id=result["id"],
+            father_name=result["father_name"],
+            mother_name=result["mother_name"],
+        )
+    except ParentDoesNotExists as e:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return ParentDoesNotExistsResponse(context=e.context)

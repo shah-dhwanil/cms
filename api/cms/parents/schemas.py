@@ -35,3 +35,9 @@ class ParentAlreadyExistsResponse(BaseModel):
     slug: str = ParentAlreadyExists.slug
     description: str = ParentAlreadyExists.description
     context: dict[str, Any] = Field(examples=[{"identifier": "user_id"}])
+
+
+class GetStudentResponse(BaseModel):
+    id: UUID
+    first_name: str
+    last_name: str

@@ -2,6 +2,7 @@ from typing import Any, Optional
 from uuid import UUID
 
 from asyncpg import Connection, ForeignKeyViolationError, UniqueViolationError
+from cms.parents.exceptions import ParentDoesNotExists
 from cms.users.exceptions import UserDoesNotExists
 from cms.students.exceptions import StudentAlreadyExists, StudentDoesNotExists
 
@@ -108,3 +109,17 @@ class StudentRepository:
         )
         if result == "UPDATE 0":
             raise StudentDoesNotExists(identifier="id")
+
+    @staticmethod
+    async def get_parent(connection: Connection, student_id: UUID) -> dict[str, Any]:
+        result = await connection.fetchrow(
+            """
+            SELECT parents.id,parents.father_name,parents.mother_name
+            FROM students_parents
+            INNER JOIN parents ON students_parents.parent_id = parents.id AND student_id = $1;
+            """,
+            student_id,
+        )
+        if result is None:
+            raise ParentDoesNotExists(identifier="student_id")
+        return result

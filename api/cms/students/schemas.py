@@ -1,6 +1,6 @@
 from typing import Optional
 from uuid import UUID
-from cms.students.exceptions import StudentAlreadyExists
+from cms.students.exceptions import StudentAlreadyExists, StudentDoesNotExists
 from pydantic import BaseModel, Field
 
 
@@ -35,9 +35,15 @@ class UpdateStudentRequest(BaseModel):
     )
 
 
+class GetParentResponse(BaseModel):
+    id: UUID
+    father_name: str = Field(max_length=16)
+    mother_name: str = Field(max_length=16)
+
+
 class StudentDoesNotExistsResponse(BaseModel):
-    slug: str = StudentAlreadyExists.slug
-    description: str = StudentAlreadyExists.description
+    slug: str = StudentDoesNotExists.slug
+    description: str = StudentDoesNotExists.description
     context: dict = Field(examples=[{"identifier": "id"}])
 
 

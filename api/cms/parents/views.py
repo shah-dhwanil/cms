@@ -1,7 +1,8 @@
-from typing import Annotated
+from typing import Annotated, Union
 from uuid import UUID
 from asyncpg import Connection, Path
 from cms.auth.exceptions import NotEnoughPermissions
+from cms.students.exceptions import StudentAlreadyExists, StudentDoesNotExists
 from cms.utils.postgres import PgPool
 from fastapi import APIRouter, Body, Depends, Response, status
 from cms.parents.exceptions import ParentAlreadyExists, ParentDoesNotExists
@@ -11,10 +12,15 @@ from cms.parents.schemas import (
     UpdateParentRequest,
     ParentAlreadyExistsResponse,
     ParentDoesNotExistsResponse,
+    GetStudentResponse,
 )
 from cms.parents.repository import ParentRepository
 from cms.users.exceptions import UserDoesNotExists
 from cms.users.schemas import UserDoesNotExistsResponse
+from cms.students.schemas import (
+    StudentAlreadyExistsResponse,
+    StudentDoesNotExistsResponse,
+)
 from cms.auth.schemas import CredentialsNotFoundResponse, NotAuthorizedResponse
 from cms.auth.dependency import PermissionRequired, get_user_id
 
@@ -133,3 +139,80 @@ async def delete_parent(
     except ParentDoesNotExists as e:
         response.status_code = status.HTTP_404_NOT_FOUND
         return ParentDoesNotExistsResponse(context=e.context)
+
+
+@router.post(
+    "/{parent_id}/link/{student_id}",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        Depends(PermissionRequired(["parents:create:any", "student:create:any"]))
+    ],
+    responses={
+        409: {"model": StudentAlreadyExistsResponse},
+        404: {
+            "model": Union[ParentDoesNotExistsResponse, StudentDoesNotExistsResponse]
+        },
+    },
+)
+async def link_student(
+    parent_id: Annotated[UUID, Path()],
+    student_id: Annotated[UUID, Path()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    try:
+        await ParentRepository.link_student(connection, student_id, parent_id)
+        response.status_code = status.HTTP_201_CREATED
+        return
+    except ParentDoesNotExists as e:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return ParentDoesNotExistsResponse(context=e.context)
+    except StudentDoesNotExists as e:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return StudentDoesNotExistsResponse(context=e.context)
+    except StudentAlreadyExists as e:
+        response.status_code = status.HTTP_409_CONFLICT
+        return StudentAlreadyExistsResponse(context=e.context)
+
+
+@router.post(
+    "/{parent_id}/unlink/{student_id}",
+    dependencies=[
+        Depends(PermissionRequired(["parents:delete:any", "student:delete:any"]))
+    ],
+    responses={200: {"model": None}, 404: {"model": ParentDoesNotExistsResponse}},
+)
+async def unlink_student(
+    parent_id: Annotated[UUID, Path()],
+    student_id: Annotated[UUID, Path()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    await ParentRepository.unlink_student(connection, parent_id, student_id)
+    response.status_code = status.HTTP_200_OK
+    return
+
+
+@router.get("/{id}/students", responses={200: {"model": list[GetStudentResponse]}})
+async def get_students(
+    id: Annotated[UUID, Path()],
+    user_permissions: Annotated[
+        list[str],
+        Depends(PermissionRequired(["student:read:any"], ["student:read:self"])),
+    ],
+    user_id: Annotated[UUID, Depends(get_user_id)],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    if "students:read:self" in user_permissions and user_id != id:
+        raise NotEnoughPermissions()
+    students = await ParentRepository.get_students(connection, id)
+    response.status_code = status.HTTP_200_OK
+    return [
+        GetStudentResponse(
+            id=student["id"],
+            first_name=student["first_name"],
+            last_name=student["last_name"],
+        )
+        for student in students
+    ]
