@@ -9,18 +9,18 @@ class CreateStudentRequest(BaseModel):
     first_name: str = Field(max_length=16)
     last_name: str = Field(max_length=16)
     gender: str = Field(min_length=1, max_length=1)
-    aadhaar_no: str = Field(pattern=r"[0-9]{12}",min_length=12, max_length=12)
-    apaar_id: str = Field(pattern=r"[0-9]{12}",min_length=12, max_length=12)
+    aadhaar_no: str = Field(pattern=r"[0-9]{12}", min_length=12, max_length=12)
+    apaar_id: str = Field(pattern=r"[0-9]{12}", min_length=12, max_length=12)
 
 
 class GetStudentResponse(BaseModel):
-    id:UUID
+    id: UUID
     first_name: str = Field(max_length=16)
     last_name: str = Field(max_length=16)
     gender: str = Field(min_length=1, max_length=1)
     aadhaar_no: str = Field(pattern=r"[0-9]{12}", min_length=12, max_length=12)
     apaar_id: str = Field(pattern=r"[0-9]{12}", min_length=12, max_length=12)
-    active:bool
+    active: bool
 
 
 class UpdateStudentRequest(BaseModel):

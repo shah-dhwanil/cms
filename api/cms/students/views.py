@@ -60,6 +60,7 @@ async def create_student(
         response.status_code = status.HTTP_409_CONFLICT
         return StudentAlreadyExistsResponse(context=e.context)
 
+
 @router.get(
     "/",
     dependencies=[Depends(PermissionRequired(["student:read:any"]))],
@@ -81,9 +82,11 @@ async def get_students(
             gender=record["gender"],
             aadhaar_no=record["aadhaar_no"],
             apaar_id=record["apaar_id"],
-            active=record["active"]
-        ) for record in result
+            active=record["active"],
+        )
+        for record in result
     ]
+
 
 @router.get(
     "/{id}",

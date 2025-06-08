@@ -43,9 +43,9 @@ class StudentRepository:
                     raise StudentAlreadyExists(identifier="unkown")
         except ForeignKeyViolationError:
             raise UserDoesNotExists(identifier="id")
-    
+
     @staticmethod
-    async def get_all(connection: Connection)->list[dict[str,Any]]:
+    async def get_all(connection: Connection) -> list[dict[str, Any]]:
         result = await connection.fetch(
             """
             SELECT id,first_name,last_name,gender,aadhaar_no,apaar_id,active FROM students WHERE active = TRUE;
@@ -54,7 +54,7 @@ class StudentRepository:
         return result
 
     @staticmethod
-    async def get_by_id(connection: Connection, id: UUID)->dict[str,Any]:
+    async def get_by_id(connection: Connection, id: UUID) -> dict[str, Any]:
         result = await connection.fetchrow(
             """
             SELECT id,first_name,last_name,gender,aadhaar_no,apaar_id,active FROM students WHERE id=$1;

@@ -83,6 +83,34 @@
         {
             "name":"student:delete:any",
             "description":"Delete any student"
+        },
+        {
+            "name":"staff:create:any",
+            "description":"Create Staff"
+        },
+        {
+            "name":"staff:read:self",
+            "description":"Access their own data"
+        },
+        {
+            "name":"staff:read:public",
+            "description": "Access any staff who is public"
+        },
+        {
+            "name":"staff:read:any",
+            "description": "Access any staff data"
+        },
+        {
+            "name":"staff:update:self",
+            "description": "Update own data"
+        },
+        {
+            "name":"staff:update:any",
+            "description": "Update any staff data"
+        },
+        {
+            "name":"staff:delete:any",
+            "description":"Delete any staff"
         }
     ]
 }
