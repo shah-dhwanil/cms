@@ -111,6 +111,26 @@
         {
             "name":"staff:delete:any",
             "description":"Delete any staff"
+        },
+        {
+            "name":"parents:create:any",
+            "description":"Create Parents"
+        },
+        {
+            "name":"parents:read:self",
+            "description":"Access their own data"
+        },
+        {
+            "name":"parents:read:any",
+            "description": "Access any parents data"
+        },
+        {
+            "name":"parents:update:self",
+            "description": "Update own data"
+        },
+        {
+            "name":"parents:delete:any",
+            "description":"Delete any Parent"
         }
     ]
 }
