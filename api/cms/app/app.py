@@ -1,12 +1,23 @@
-from fastapi import FastAPI
 from cms.app.lifespan import lifespan
+from cms.app.middlewares import (
+    ContextMiddleware,
+    LoggingMiddleware,
+    RequestIDMiddleware,
+)
+from fastapi import FastAPI
 from structlog import get_logger
-from cms.utils.minio import MinioClient
-app = FastAPI(title="College Management System", lifespan=lifespan)
+
+app = FastAPI(
+    title="College Management System",
+    lifespan=lifespan,
+)
+app.add_middleware(LoggingMiddleware)
+app.add_middleware(ContextMiddleware)
+app.add_middleware(RequestIDMiddleware)
+
+
 @app.get("/")
 async def root():
-    print("request_recieved")
-    client = MinioClient.get_client()
-    await client.make_bucket("firebase")
-    get_logger().info("Welcome to College Management System")
+    logger = get_logger()
+    logger.info("Root endpoint accessed")
     return {"message": "Welcome to College Management System"}
