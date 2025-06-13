@@ -7,6 +7,7 @@ from cms.app.middlewares import (
 from fastapi import FastAPI
 from structlog import get_logger
 from cms.users.views import router as users_router
+from cms.permissions.views import router as permissions_router
 
 app = FastAPI(
     title="College Management System",
@@ -18,6 +19,7 @@ app.add_middleware(RequestIDMiddleware)
 
 
 app.include_router(users_router)
+app.include_router(permissions_router)
 
 @app.get("/")
 async def root():
