@@ -90,7 +90,6 @@ class UserRepository:
     async def update(
         connection: Connection,
         uid: UUID,
-        email_id: Optional[str] = None,
         password: Optional[str] = None,
         contact_no: Optional[str] = None,
         profile_image_id: Optional[UUID] = None,
@@ -98,14 +97,12 @@ class UserRepository:
         response = await connection.execute(
             """--sql
             UPDATE users
-            SET email_id = COALESCE($2, email_id),
-                password = COALESCE($3,password),
-                contact_no = COALESCE($4, contact_no),
-                profile_image_id = COALESCE($5, profile_image_id)
+            SET password = COALESCE($2,password),
+                contact_no = COALESCE($3, contact_no),
+                profile_image_id = COALESCE($4, profile_image_id)
             WHERE id = $1;
             """,
             uid,
-            email_id,
             password,
             contact_no,
             profile_image_id,

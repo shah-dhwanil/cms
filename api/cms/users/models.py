@@ -32,7 +32,6 @@ class CreateUserResponse(BaseModel):
 
 
 class UpdateUserRequest(BaseModel):
-    email_id: Optional[EmailStr] = Field(None, max_length=64)
     contact_no: Optional[PhoneNumber] = Field(None, max_length=20)
     profile_image_id: Optional[UUID] = None
 

@@ -48,7 +48,7 @@ async def create_user(
     try:
         uid = await UserRepository.create(
             connection,
-            body.email_id,
+            body.email_id.lower(),
             hashed_password,
             body.contact_no,
             body.profile_image_id,
@@ -143,7 +143,7 @@ async def get_user_by_email_id(
     response: Response,
 ):
     try:
-        record = await UserRepository.get_by_email_id(connection, email_id)
+        record = await UserRepository.get_by_email_id(connection, email_id.lower())
         response.status_code = status.HTTP_200_OK
         return User(
             user_id=record["id"],
@@ -160,7 +160,8 @@ async def get_user_by_email_id(
 @router.patch(
     "/{user_id}",
     responses={
-        status.HTTP_200_OK: {
+        status.HTTP_204_NO_CONTENT: {
+            "model": None,
             "description": "User updated successfully.",
         },
         status.HTTP_404_NOT_FOUND: {
@@ -179,12 +180,11 @@ async def update_user(
         await UserRepository.update(
             connection,
             user_id,
-            body.email_id,
             None,
             body.contact_no,
             body.profile_image_id,
         )
-        response.status_code = status.HTTP_200_OK
+        response.status_code = status.HTTP_204_NO_CONTENT
         return
     except UserNotFoundException as e:
         response.status_code = status.HTTP_404_NOT_FOUND
@@ -194,7 +194,8 @@ async def update_user(
 @router.patch(
     "/{user_id}/password",
     responses={
-        status.HTTP_200_OK: {
+        status.HTTP_204_NO_CONTENT: {
+            "model": None,
             "description": "User password updated successfully.",
         },
         status.HTTP_400_BAD_REQUEST: {
@@ -233,7 +234,8 @@ async def update_user_password(
 @router.delete(
     "/{user_id}",
     responses={
-        status.HTTP_200_OK: {
+        status.HTTP_204_NO_CONTENT: {
+            "model": None,
             "description": "User deleted successfully.",
         },
         status.HTTP_404_NOT_FOUND: {
