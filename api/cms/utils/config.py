@@ -1,8 +1,9 @@
-from typing import Self
-from pydantic import BaseModel
-from dotenv import load_dotenv
-from tomllib import load
 from os import environ
+from typing import Self
+
+from dotenv import load_dotenv
+from pydantic import BaseModel
+from tomllib import load
 
 __config__ = None
 
@@ -17,7 +18,13 @@ class Config(BaseModel):
     MINIO_ADDRESS: str
     MINIO_ACCESS_KEY: str
     MINIO_SECRET_KEY: str
-    MINIO_SECURE:bool
+    MINIO_SECURE: bool
+    ARGON_TIME_COST: int
+    ARGON_MEMORY_COST: int
+    ARGON_PARALLELISM: int
+    ARGON_SALT_LENGTH: int
+    ARGON_HASH_LENGTH: int
+
     @classmethod
     def load_config(cls):
         load_dotenv("./.env")
