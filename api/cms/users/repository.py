@@ -1,9 +1,12 @@
 from typing import Any, Optional
 from uuid import UUID
 
-from asyncpg import Connection, UniqueViolationError
+from asyncpg import Connection, ForeignKeyViolationError, UniqueViolationError
+from cms.permissions.exceptions import PermissionNotFoundException
 from cms.users.exceptions import UserAlreadyExistsException, UserNotFoundException
 from uuid_utils.compat import uuid7
+
+__all__ = ["UserRepository"]
 
 
 class UserRepository:
@@ -112,7 +115,7 @@ class UserRepository:
 
     @staticmethod
     async def delete(connection: Connection, uid: UUID) -> None:
-        response = await connection.execute(
+        await connection.execute(
             """--sql
             UPDATE users
             SET
@@ -121,5 +124,72 @@ class UserRepository:
             """,
             uid,
         )
-        if response != "UPDATE 1":
-            raise UserNotFoundException("user_id")
+
+    @staticmethod
+    async def grant_permissions(
+        connection: Connection, user_id: UUID, permissions: list[str]
+    ) -> None:
+        try:
+            await connection.executemany(
+                """--sql
+                INSERT INTO user_permissions (user_id, permission)
+                VALUES ($1, $2)
+                ON CONFLICT (user_id, permission) DO NOTHING;
+                """,
+                [(user_id, permission) for permission in permissions],
+            )
+        except ForeignKeyViolationError as e:
+            details = e.as_dict()
+            match details["constraint_name"]:
+                case "fk_user_permissions_user":
+                    raise UserNotFoundException(parameter="user_id")
+                case "fk_user_permissions_permissions":
+                    raise PermissionNotFoundException(parameter="permission")
+                case _:
+                    raise Exception(details)
+
+    @staticmethod
+    async def revoke_permissions(
+        connection: Connection, user_id: UUID, permissions: list[str]
+    ) -> None:
+        reponse = await connection.execute(
+            """--sql
+            DELETE FROM user_permissions
+            WHERE user_id = $1 AND permission = ANY($2);
+            """,
+            user_id,
+            permissions,
+        )
+        if reponse == "DELETE 0":
+            result = await connection.fetchval(
+                """--sql
+                SELECT TRUE FROM users WHERE id = $1 AND active = TRUE;
+                """,
+                user_id,
+            )
+            if not result:
+                raise UserNotFoundException(parameter="user_id")
+
+    @staticmethod
+    async def get_user_permissions(
+        connection: Connection, user_id: UUID
+    ) -> list[dict[str, Any]]:
+        records = await connection.fetch(
+            """--sql
+            SELECT permission
+            FROM user_permissions
+            WHERE user_id = $1
+            ORDER BY permission;
+            """,
+            user_id,
+        )
+        if len(records) == 0:
+            result = await connection.fetchval(
+                """--sql
+                SELECT TRUE FROM users WHERE id = $1 AND active = TRUE;
+                """,
+                user_id,
+            )
+            if not result:
+                raise UserNotFoundException(parameter="user_id")
+        return records

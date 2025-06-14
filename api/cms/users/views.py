@@ -1,11 +1,16 @@
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Union
 from uuid import UUID
 from argon2.exceptions import VerifyMismatchError
+from cms.permissions.exceptions import PermissionNotFoundException
+from cms.permissions.models import PermissionNotFoundExceptionResponse
 from cms.users.models import (
     CreateUserRequest,
     CreateUserResponse,
+    GrantPermissionRequest,
+    ListUserPermissionsResponse,
     ListUserResponse,
     PasswordIncorrectExceptionResponse,
+    RevokePermissionRequest,
     UpdateUserPasswordRequest,
     UpdateUserRequest,
     User,
@@ -21,6 +26,20 @@ from fastapi import status
 from asyncpg import Connection
 from pydantic import EmailStr
 
+
+__all__ = [
+    "router",
+    "create_user",
+    "get_all_users",
+    "get_user_by_id",
+    "get_user_by_email_id",
+    "update_user",
+    "update_user_password",
+    "delete_user",
+    "grant_user_permissions",
+    "revoke_user_permissions",
+    "get_user_permissions",
+]
 
 router = APIRouter(prefix="/user", tags=["users"])
 
@@ -62,6 +81,7 @@ async def create_user(
 
 @router.get(
     "/",
+    status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
             "model": ListUserResponse,
@@ -93,6 +113,7 @@ async def get_all_users(
 
 @router.get(
     "/{user_id}",
+    status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
             "model": User,
@@ -126,6 +147,7 @@ async def get_user_by_id(
 
 @router.get(
     "/by_email/{email_id}",
+    status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
             "model": User,
@@ -159,6 +181,7 @@ async def get_user_by_email_id(
 
 @router.patch(
     "/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
     responses={
         status.HTTP_204_NO_CONTENT: {
             "model": None,
@@ -193,6 +216,7 @@ async def update_user(
 
 @router.patch(
     "/{user_id}/password",
+    status_code=status.HTTP_204_NO_CONTENT,
     responses={
         status.HTTP_204_NO_CONTENT: {
             "model": None,
@@ -221,7 +245,7 @@ async def update_user_password(
         await UserRepository.update(
             connection, user_id, None, hashed_password, None, None
         )
-        response.status_code = status.HTTP_200_OK
+        response.status_code = status.HTTP_204_NO_CONTENT
         return
     except VerifyMismatchError:
         response.status_code = status.HTTP_400_BAD_REQUEST
@@ -233,14 +257,11 @@ async def update_user_password(
 
 @router.delete(
     "/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
     responses={
         status.HTTP_204_NO_CONTENT: {
             "model": None,
             "description": "User deleted successfully.",
-        },
-        status.HTTP_404_NOT_FOUND: {
-            "model": UserNotFoundExceptionResponse,
-            "description": "User not found.",
         },
     },
 )
@@ -249,10 +270,99 @@ async def delete_user(
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
     response: Response,
 ):
+    await UserRepository.delete(connection, user_id)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return
+
+
+@router.post(
+    "/{user_id}/permissions/grant",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_204_NO_CONTENT: {
+            "model": None,
+            "description": "Permissions granted successfully.",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": Union[
+                UserNotFoundExceptionResponse, PermissionNotFoundExceptionResponse
+            ],
+            "description": "Resource not found.",
+        },
+    },
+)
+async def grant_user_permissions(
+    user_id: Annotated[UUID, Path()],
+    body: Annotated[GrantPermissionRequest, Body()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
     try:
-        await UserRepository.delete(connection, user_id)
-        response.status_code = status.HTTP_200_OK
+        await UserRepository.grant_permissions(connection, user_id, body.permissions)
+        response.status_code = status.HTTP_204_NO_CONTENT
         return
+    except UserNotFoundException as e:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return UserNotFoundExceptionResponse(context=e.context)
+    except PermissionNotFoundException as e:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return PermissionNotFoundExceptionResponse(context=e.context)
+
+
+@router.post(
+    "/{user_id}/permissions/revoke",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_204_NO_CONTENT: {
+            "model": None,
+            "description": "Permissions revoked successfully.",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": UserNotFoundExceptionResponse,
+            "description": "User not found.",
+        },
+    },
+)
+async def revoke_user_permissions(
+    user_id: Annotated[UUID, Path()],
+    body: Annotated[RevokePermissionRequest, Body()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    try:
+        await UserRepository.revoke_permissions(connection, user_id, body.permissions)
+        response.status_code = status.HTTP_204_NO_CONTENT
+        return
+    except UserNotFoundException as e:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return UserNotFoundExceptionResponse(context=e.context)
+
+
+@router.get(
+    "/{user_id}/permissions",
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "model": ListUserPermissionsResponse,
+            "description": "User permissions retrieved successfully.",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": UserNotFoundExceptionResponse,
+            "description": "User not found.",
+        },
+    },
+)
+async def get_user_permissions(
+    user_id: Annotated[UUID, Path()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    try:
+        records = await UserRepository.get_user_permissions(connection, user_id)
+        response.status_code = status.HTTP_200_OK
+        return ListUserPermissionsResponse(
+            permissions=[record["permission"] for record in records]
+        )
     except UserNotFoundException as e:
         response.status_code = status.HTTP_404_NOT_FOUND
         return UserNotFoundExceptionResponse(context=e.context)

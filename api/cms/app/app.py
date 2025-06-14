@@ -21,6 +21,7 @@ app.add_middleware(RequestIDMiddleware)
 app.include_router(users_router)
 app.include_router(permissions_router)
 
+
 @app.get("/")
 async def root():
     logger = get_logger()

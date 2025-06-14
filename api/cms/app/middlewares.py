@@ -25,10 +25,12 @@ class ContextMiddleware(BaseHTTPMiddleware):
 class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         logger = get_logger()
-        logger.info(event="request_start", method=request.method, path=request.url.path)
+        logger.info(
+            event="request_recieved", method=request.method, path=request.url.path
+        )
         response = await call_next(request)
         logger.info(
-            event="request_end",
+            event="response_sent",
             method=request.method,
             path=request.url.path,
             status_code=response.status_code,

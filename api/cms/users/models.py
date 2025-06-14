@@ -8,6 +8,21 @@ from pydantic_extra_types.phone_numbers import PhoneNumber
 from typing import Optional, List
 from uuid import UUID
 
+__all__ = [
+    "User",
+    "CreateUserRequest",
+    "CreateUserResponse",
+    "UpdateUserRequest",
+    "UpdateUserPasswordRequest",
+    "ListUserResponse",
+    "UserNotFoundExceptionResponse",
+    "UserAlreadyExistsExceptionResponse",
+    "PasswordIncorrectExceptionResponse",
+    "GrantPermissionRequest",
+    "RevokePermissionRequest",
+    "ListUserPermissionsResponse",
+]
+
 PhoneNumber.phone_format = "INTERNATIONAL"
 PhoneNumber.default_region_code = "IN"
 
@@ -61,3 +76,21 @@ class PasswordIncorrectExceptionResponse(BaseModel):
     slug: str = PasswordIncorrectException.slug
     description: str = PasswordIncorrectException.description
     context: dict
+
+
+class GrantPermissionRequest(BaseModel):
+    permissions: List[str] = Field(
+        ..., description="List of permission slugs to assign"
+    )
+
+
+class RevokePermissionRequest(BaseModel):
+    permissions: List[str] = Field(
+        ..., description="List of permission slugs to remove"
+    )
+
+
+class ListUserPermissionsResponse(BaseModel):
+    permissions: List[str] = Field(
+        ..., description="List of permission slugs assigned to the user"
+    )

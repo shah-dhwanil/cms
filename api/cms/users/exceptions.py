@@ -1,6 +1,13 @@
 from cms.utils.exceptions import CMSException
 
 
+__all__ = [
+    "UserNotFoundException",
+    "UserAlreadyExistsException",
+    "PasswordIncorrectException",
+]
+
+
 class UserNotFoundException(CMSException):
     slug = "user_not_found"
     description = "The requested user does not exist."
