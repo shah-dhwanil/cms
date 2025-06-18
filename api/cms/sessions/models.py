@@ -23,7 +23,6 @@ class Session(BaseModel):
 
 class CreateSessionRequest(BaseModel):
     user_id: UUID
-    expires_at: datetime = Field(..., description="Expiration time for the session")
 
 
 class CreateSessionResponse(BaseModel):

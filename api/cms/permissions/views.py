@@ -19,6 +19,11 @@ from cms.permissions.models import (
     PermissionStillReferencedExceptionResponse,
     UpdatePermissionRequest,
 )
+from cms.auth.dependency import RequiresPermission
+from cms.auth.models import (
+    CredentialsNotFoundExceptionResponse,
+    NotAuthorizedExceptionResponse,
+)
 
 __all__ = [
     "router",
@@ -29,12 +34,26 @@ __all__ = [
     "delete_permission",
 ]
 
-router = APIRouter(prefix="/permission", tags=["permissions"])
+router = APIRouter(
+    prefix="/permission",
+    tags=["permissions"],
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "model": CredentialsNotFoundExceptionResponse,
+            "description": "Credentials not found or invalid.",
+        },
+        status.HTTP_403_FORBIDDEN: {
+            "model": NotAuthorizedExceptionResponse,
+            "description": "User is not authorized to perform this action.",
+        },
+    },
+)
 
 
 @router.post(
     "/",
     status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(RequiresPermission("permission:create"))],
     responses={
         status.HTTP_204_NO_CONTENT: {
             "description": "Permission created successfully.",
@@ -61,6 +80,7 @@ async def create_permission(
 
 @router.get(
     "/",
+    dependencies=[Depends(RequiresPermission("permission:read"))],
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
@@ -90,6 +110,7 @@ async def get_all_permissions(
 
 @router.get(
     "/{slug}",
+    dependencies=[Depends(RequiresPermission("permission:read"))],
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
@@ -121,6 +142,7 @@ async def get_permission_by_slug(
 
 @router.patch(
     "/{slug}",
+    dependencies=[Depends(RequiresPermission("permission:update"))],
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         status.HTTP_204_NO_CONTENT: {
@@ -150,6 +172,7 @@ async def update_permission(
 
 @router.delete(
     "/{slug}",
+    dependencies=[Depends(RequiresPermission("permission:delete"))],
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         status.HTTP_204_NO_CONTENT: {

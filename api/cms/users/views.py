@@ -1,6 +1,12 @@
 from typing import Annotated, Optional, Union
 from uuid import UUID
 from argon2.exceptions import VerifyMismatchError
+from cms.auth.dependency import (
+    RequiresPermission,
+    RequiresAnyOfGivenPermission,
+    get_session,
+)
+from cms.auth.exceptions import NotEnoughPermissionsException
 from cms.permissions.exceptions import PermissionNotFoundException
 from cms.permissions.models import PermissionNotFoundExceptionResponse
 from cms.users.models import (
@@ -25,6 +31,11 @@ from cms.users.repository import UserRepository
 from fastapi import status
 from asyncpg import Connection
 from pydantic import EmailStr
+from cms.auth.models import (
+    CredentialsNotFoundExceptionResponse,
+    NotAuthorizedExceptionResponse,
+    Session,
+)
 
 
 __all__ = [
@@ -41,12 +52,26 @@ __all__ = [
     "get_user_permissions",
 ]
 
-router = APIRouter(prefix="/user", tags=["users"])
+router = APIRouter(
+    prefix="/user",
+    tags=["users"],
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "model": CredentialsNotFoundExceptionResponse,
+            "description": "Credentials not found or invalid.",
+        },
+        status.HTTP_403_FORBIDDEN: {
+            "model": NotAuthorizedExceptionResponse,
+            "description": "User is not authorized to perform this action.",
+        },
+    },
+)
 
 
 @router.post(
     "/",
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(RequiresPermission("user:create"))],
     responses={
         status.HTTP_201_CREATED: {
             "model": CreateUserResponse,
@@ -81,6 +106,7 @@ async def create_user(
 
 @router.get(
     "/",
+    dependencies=[Depends(RequiresPermission("user:read:any"))],
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
@@ -128,8 +154,17 @@ async def get_all_users(
 async def get_user_by_id(
     user_id: Annotated[UUID, Path()],
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    session: Annotated[Session, Depends(get_session)],
+    permissions: Annotated[
+        list[str],
+        Depends(RequiresAnyOfGivenPermission(["user:read:any"], ["user:read:self"])),
+    ],
     response: Response,
 ):
+    # Check if user is accessing their own data or has permission to read any user
+    if "user:read:self" in permissions and user_id != session.user.user_id:
+        raise NotEnoughPermissionsException()
+
     try:
         record = await UserRepository.get_by_id(connection, user_id)
         response.status_code = status.HTTP_200_OK
@@ -162,10 +197,17 @@ async def get_user_by_id(
 async def get_user_by_email_id(
     email_id: Annotated[EmailStr, Path()],
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    session: Annotated[Session, Depends(get_session)],
+    permissions: Annotated[
+        list[str],
+        Depends(RequiresAnyOfGivenPermission(["user:read:any"], ["user:read:self"])),
+    ],
     response: Response,
 ):
     try:
         record = await UserRepository.get_by_email_id(connection, email_id.lower())
+        if "user:read:self" in permissions and record["id"] != session.user.user_id:
+            raise NotEnoughPermissionsException()
         response.status_code = status.HTTP_200_OK
         return User(
             user_id=record["id"],
@@ -197,8 +239,19 @@ async def update_user(
     user_id: Annotated[UUID, Path()],
     body: Annotated[UpdateUserRequest, Body()],
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    session: Annotated[Session, Depends(get_session)],
+    permissions: Annotated[
+        list[str],
+        Depends(
+            RequiresAnyOfGivenPermission(["user:update:any"], ["user:update:self"])
+        ),
+    ],
     response: Response,
 ):
+    # Check if user is updating their own data or has permission to update any user
+    if "user:update:self" in permissions and user_id != session.user.user_id:
+        return NotEnoughPermissionsException()
+
     try:
         await UserRepository.update(
             connection,
@@ -236,8 +289,17 @@ async def update_user_password(
     user_id: Annotated[UUID, Path()],
     body: Annotated[UpdateUserPasswordRequest, Body()],
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    session: Annotated[Session, Depends(get_session)],
+    permissions: Annotated[
+        list[str],
+        Depends(
+            RequiresAnyOfGivenPermission(["user:update:any"], ["user:update:self"])
+        ),
+    ],
     response: Response,
 ):
+    if "user:update:self" in permissions and user_id != session.user.user_id:
+        raise NotEnoughPermissionsException()
     try:
         record = await UserRepository.get_by_id(connection, user_id)
         verify_password(record["password"], body.current_password)
@@ -257,6 +319,7 @@ async def update_user_password(
 
 @router.delete(
     "/{user_id}",
+    dependencies=[Depends(RequiresPermission("user:delete"))],
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         status.HTTP_204_NO_CONTENT: {
@@ -277,6 +340,7 @@ async def delete_user(
 
 @router.post(
     "/{user_id}/permissions/grant",
+    dependencies=[Depends(RequiresPermission("user:grant_permission"))],
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         status.HTTP_204_NO_CONTENT: {
@@ -311,6 +375,7 @@ async def grant_user_permissions(
 
 @router.post(
     "/{user_id}/permissions/revoke",
+    dependencies=[Depends(RequiresPermission(["user:revoke_permission"]))],
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         status.HTTP_204_NO_CONTENT: {
@@ -355,8 +420,19 @@ async def revoke_user_permissions(
 async def get_user_permissions(
     user_id: Annotated[UUID, Path()],
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    session: Annotated[Session, Depends(get_session)],
+    permissions: Annotated[
+        list[str],
+        Depends(
+            RequiresAnyOfGivenPermission(
+                ["user_permission:read:any"], ["user_permission:read:self"]
+            )
+        ),
+    ],
     response: Response,
 ):
+    if "user_permission:read:self" in permissions and user_id != session.user.user_id:
+        raise NotEnoughPermissionsException()
     try:
         records = await UserRepository.get_user_permissions(connection, user_id)
         response.status_code = status.HTTP_200_OK

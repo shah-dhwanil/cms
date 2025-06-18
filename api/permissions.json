@@ -1,0 +1,84 @@
+{
+    "permissions":[
+        {
+            "slug":"user:create",
+            "description":"Create a new user"
+        },
+        {
+            "slug":"user:read:self",
+            "description":"Read user information"
+        },
+        {
+            "slug": "user:read:any",
+            "description": "Read any user's information"
+        },
+        {
+            "slug":"user:update:self",
+            "description":"Update user information"
+        },
+        {
+            "slug": "user:update:any",
+            "description": "Update any user's information"
+        },
+        {
+            "slug":"user:delete",
+            "description":"Delete a user"
+        },
+        {
+            "slug":"permission:create",
+            "description":"Create a new permission"
+        },
+        {
+            "slug":"permission:read",
+            "description":"Read permission information"
+        },
+        {
+            "slug": "permission:update",
+            "description": "Update any permission information"
+        },
+        {
+            "slug":"permission:delete",
+            "description":"Delete a permission"
+        },
+        {
+            "slug":"user:grant_permission",
+            "description":"Grant permission to a user"
+        },
+        {
+            "slug":"user:revoke_permission",
+            "description":"Revoke permission of a user"
+        },
+        {
+            "slug":"user_permission:read:self",
+            "description":"Read user's permissions"
+        },
+        {
+            "slug": "user_permission:read:any",
+            "description": "Read any user's permissions"
+        },
+        {
+            "slug":"session:create",
+            "description":"Create a new session"
+        },
+        {
+            "slug":"session:read:self",
+            "description":"Read session information"
+        },
+        {
+            "slug": "session:read:any",
+            "description": "Read any session information"
+        },
+        {
+            "slug":"session:delete:self",
+            "description":"Soft delete a session"
+        },
+        {
+            "slug": "session:delete:any",
+            "description": "Soft delete a session"
+        },
+        {
+            "slug": "session:delete:expired",
+            "description": "Hard delete all expired session"
+        }
+    ]
+}

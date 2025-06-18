@@ -1,4 +1,14 @@
 from typing import Annotated
+from cms.auth.dependency import (
+    RequiresPermission,
+    RequiresAnyOfGivenPermission,
+    get_session,
+)
+from cms.auth.exceptions import NotEnoughPermissionsException
+from cms.auth.models import (
+    CredentialsNotFoundExceptionResponse,
+    NotAuthorizedExceptionResponse,
+)
 from fastapi import Request
 from uuid import UUID
 from cms.sessions.repository import SessionRepository
@@ -30,11 +40,25 @@ __all__ = [
     "clean_expired_sessions",
 ]
 
-router = APIRouter(prefix="/session", tags=["sessions"])
+router = APIRouter(
+    prefix="/session",
+    tags=["sessions"],
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "model": CredentialsNotFoundExceptionResponse,
+            "description": "Credentials not found or invalid.",
+        },
+        status.HTTP_403_FORBIDDEN: {
+            "model": NotAuthorizedExceptionResponse,
+            "description": "User is not authorized to perform this action.",
+        },
+    },
+)
 
 
 @router.post(
     "/",
+    dependencies=[Depends(RequiresPermission("session.create"))],
     status_code=status.HTTP_201_CREATED,
     responses={
         status.HTTP_201_CREATED: {
@@ -85,10 +109,20 @@ async def create_session(
 async def get_session_by_id(
     session_id: Annotated[UUID, Path()],
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    session: Annotated[Session, Depends(get_session)],
+    permissions: Annotated[
+        list[str],
+        Depends(
+            RequiresAnyOfGivenPermission(["session:read:any"], ["session:read:self"])
+        ),
+    ],
     response: Response,
 ):
     try:
         record = await SessionRepository.get_by_id(connection, session_id)
+        if "session:read:self" in permissions and record["user_id"] != session.user_id:
+            raise NotEnoughPermissionsException()
+
         response.status_code = status.HTTP_200_OK
         return Session(
             session_id=record["session_id"],
@@ -115,8 +149,17 @@ async def get_session_by_id(
 async def get_sessions_by_user_id(
     user_id: Annotated[UUID, Path()],
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    session: Annotated[Session, Depends(get_session)],
+    permissions: Annotated[
+        list[str],
+        Depends(
+            RequiresAnyOfGivenPermission(["session:read:any"], ["session:read:self"])
+        ),
+    ],
     response: Response,
 ):
+    if "session:read:self" in permissions and user_id != session.user_id:
+        raise NotEnoughPermissionsException()
     records = await SessionRepository.get_by_user_id(connection, user_id)
     response.status_code = status.HTTP_200_OK
     return ListSessionResponse(
@@ -135,6 +178,7 @@ async def get_sessions_by_user_id(
 
 @router.delete(
     "/clean",
+    dependencies=[Depends(RequiresPermission("session:delete:expired"))],
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         status.HTTP_204_NO_CONTENT: {
@@ -154,6 +198,7 @@ async def clean_expired_sessions(
 
 @router.delete(
     "/{session_id}",
+    dependencies=[Depends(RequiresPermission("session:delete:any"))],
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         status.HTTP_204_NO_CONTENT: {
@@ -193,8 +238,19 @@ async def terminate_session(
 async def terminate_user_all_sessions(
     user_id: Annotated[UUID, Path()],
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    session: Annotated[Session, Depends(get_session)],
+    permissions: Annotated[
+        list[str],
+        Depends(
+            RequiresAnyOfGivenPermission(
+                ["session:delete:any"], ["session:delete:self"]
+            )
+        ),
+    ],
     response: Response,
 ):
+    if "session:delete:self" in permissions and user_id != session.user_id:
+        raise NotEnoughPermissionsException()
     await SessionRepository.terminate_all_user_sessions(connection, user_id)
     response.status_code = status.HTTP_204_NO_CONTENT
     return
