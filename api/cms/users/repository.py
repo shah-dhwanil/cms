@@ -45,6 +45,18 @@ class UserRepository:
                     raise Exception(details)
 
     @staticmethod
+    async def exists(connection: Connection, uid: UUID) -> bool:
+        result = await connection.fetchval(
+            """--sql
+            SELECT EXISTS(
+                SELECT 1 FROM users WHERE id = $1 AND is_active = TRUE
+            );
+            """,
+            uid,
+        )
+        return bool(result)
+
+    @staticmethod
     async def get_by_id(connection: Connection, uid: UUID) -> dict[str, Any]:
         record = await connection.fetchrow(
             """--sql
@@ -67,6 +79,22 @@ class UserRepository:
             WHERE email_id = $1 AND is_active = TRUE;
             """,
             email_id,
+        )
+        if record is None:
+            raise UserNotFoundException(parameter="email_id")
+        return record
+
+    @staticmethod
+    async def get_by_contact_no(
+        connection: Connection, contact_no: str
+    ) -> dict[str, Any]:
+        record = await connection.fetchrow(
+            """--sql
+            SELECT id,email_id,password,contact_no,profile_image_id,is_active
+            FROM users
+            WHERE contact_no = $1 AND is_active = TRUE;
+            """,
+            contact_no,
         )
         if record is None:
             raise UserNotFoundException(parameter="email_id")

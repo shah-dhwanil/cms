@@ -1,9 +1,14 @@
-from asyncpg import connect, Connection
+from json import dumps
+
+from asyncpg import Connection, connect
 from cms.permissions.models import ListPermissionResponse
 from cms.permissions.repository import PermissionRepository
 from cms.users.exceptions import UserAlreadyExistsException
 from cms.users.repository import UserRepository
 from cms.utils.config import Config
+from cms.utils.minio import MinioClient
+from miniopy_async.commonconfig import ENABLED
+from miniopy_async.versioningconfig import VersioningConfig
 
 
 async def setup():
@@ -11,6 +16,7 @@ async def setup():
     connection = await connect(config.POSTGRES_DSN)
     await ensure_default_permissions(connection)
     await ensure_admin_user(connection)
+    await ensure_profile_image_bucket()
     await connection.close()
 
 
@@ -46,3 +52,22 @@ async def ensure_admin_user(connection: Connection):
     await UserRepository.grant_permissions(
         connection, uid, perms
     )  # Grant all permissions to admin user
+
+
+async def ensure_profile_image_bucket():
+    async with MinioClient.get_client() as client:
+        if not await client.bucket_exists("profile-img"):
+            await client.make_bucket("profile-img")
+            policy = {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {"AWS": "*"},
+                        "Action": ["s3:GetObject"],
+                        "Resource": ["arn:aws:s3:::profile-img/*"],
+                    }
+                ],
+            }
+            await client.set_bucket_policy("profile-img", dumps(policy))
+            await client.set_bucket_versioning("profile-img", VersioningConfig(ENABLED))

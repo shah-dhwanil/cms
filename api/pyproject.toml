@@ -19,6 +19,7 @@ dependencies = [
     "pydantic>=2.11.4",
     "pydantic-extra-types[phonenumber]>=2.10.5",
     "python-dotenv>=1.1.0",
+    "python-multipart>=0.0.20",
     "structlog>=25.3.0",
     "uuid-utils>=0.11.0",
     "uvloop>=0.21.0",
