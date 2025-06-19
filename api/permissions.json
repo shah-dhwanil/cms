@@ -79,6 +79,38 @@
         {
             "slug": "session:delete:expired",
             "description": "Hard delete all expired session"
+        },
+        {
+            "slug":"student:create",
+            "description":"Create a new student"
+        },
+        {
+            "slug":"student:read:self",
+            "description":"Read student information"
+        },
+        {
+            "slug": "student:read:any",
+            "description": "Read any student's information"
+        },
+        {
+            "slug":"student:update:self",
+            "description":"Update student information"
+        },
+        {
+            "slug": "student:update:any",
+            "description": "Update any student's information"
+        },
+        {
+            "slug":"student:delete",
+            "description":"Delete a student"
+        },
+        {
+            "slug":"student:aadhaar:download",
+            "description":"Download student's Aadhaar card"
+        },
+        {
+            "slug":"student:apaar:download",
+            "description":"Download student's Apaar ID"
         }
     ]
 }

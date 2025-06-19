@@ -16,8 +16,10 @@ async def setup():
     connection = await connect(config.POSTGRES_DSN)
     await ensure_default_permissions(connection)
     await ensure_admin_user(connection)
-    await ensure_profile_image_bucket()
     await connection.close()
+    await ensure_profile_image_bucket()
+    await ensure_aadhaar_bucket()
+    await ensure_apaar_bucket()
 
 
 async def ensure_default_permissions(connection: Connection):
@@ -71,3 +73,17 @@ async def ensure_profile_image_bucket():
             }
             await client.set_bucket_policy("profile-img", dumps(policy))
             await client.set_bucket_versioning("profile-img", VersioningConfig(ENABLED))
+
+
+async def ensure_aadhaar_bucket():
+    async with MinioClient.get_client() as client:
+        if not await client.bucket_exists("aadhaar"):
+            await client.make_bucket("aadhaar")
+            await client.set_bucket_versioning("aadhaar", VersioningConfig(ENABLED))
+
+
+async def ensure_apaar_bucket():
+    async with MinioClient.get_client() as client:
+        if not await client.bucket_exists("apaar"):
+            await client.make_bucket("apaar")
+            await client.set_bucket_versioning("apaar", VersioningConfig(ENABLED))
