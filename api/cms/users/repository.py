@@ -48,9 +48,9 @@ class UserRepository:
     async def get_by_id(connection: Connection, uid: UUID) -> dict[str, Any]:
         record = await connection.fetchrow(
             """--sql
-            SELECT id,email_id,password,contact_no,profile_image_id,active
+            SELECT id,email_id,password,contact_no,profile_image_id,is_active
             FROM users
-            WHERE id = $1 AND active = TRUE;
+            WHERE id = $1 AND is_active = TRUE;
             """,
             uid,
         )
@@ -62,9 +62,9 @@ class UserRepository:
     async def get_by_email_id(connection: Connection, email_id: str) -> dict[str, Any]:
         record = await connection.fetchrow(
             """--sql
-            SELECT id,email_id,password,contact_no,profile_image_id,active
+            SELECT id,email_id,password,contact_no,profile_image_id,is_active
             FROM users
-            WHERE email_id = $1 AND active = TRUE;
+            WHERE email_id = $1 AND is_active = TRUE;
             """,
             email_id,
         )
@@ -78,9 +78,9 @@ class UserRepository:
     ) -> list[dict[str, Any]]:
         records = await connection.fetch(
             """--sql
-            SELECT id,email_id,contact_no,profile_image_id,active
+            SELECT id,email_id,contact_no,profile_image_id,is_active
             FROM users
-            WHERE active = TRUE
+            WHERE is_active = TRUE
             ORDER BY created_at ASC
             LIMIT $1 OFFSET $2;
             """,
@@ -103,7 +103,7 @@ class UserRepository:
             SET password = COALESCE($2,password),
                 contact_no = COALESCE($3, contact_no),
                 profile_image_id = COALESCE($4, profile_image_id)
-            WHERE id = $1;
+            WHERE id = $1 AND is_active = TRUE;
             """,
             uid,
             password,
@@ -119,7 +119,7 @@ class UserRepository:
             """--sql
             UPDATE users
             SET
-                active = FALSE
+                is_active = FALSE
             WHERE id = $1;
             """,
             uid,
@@ -163,7 +163,7 @@ class UserRepository:
         if reponse == "DELETE 0":
             result = await connection.fetchval(
                 """--sql
-                SELECT TRUE FROM users WHERE id = $1 AND active = TRUE;
+                SELECT TRUE FROM users WHERE id = $1 AND is_active = TRUE;
                 """,
                 user_id,
             )
@@ -186,7 +186,7 @@ class UserRepository:
         if len(records) == 0:
             result = await connection.fetchval(
                 """--sql
-                SELECT TRUE FROM users WHERE id = $1 AND active = TRUE;
+                SELECT TRUE FROM users WHERE id = $1 AND is_active = TRUE;
                 """,
                 user_id,
             )

@@ -130,7 +130,6 @@ async def get_all_users(
                 email_id=record["email_id"],
                 contact_no=record["contact_no"],
                 profile_image_id=record["profile_image_id"],
-                active=record["active"],
             )
             for record in records
         ]
@@ -173,7 +172,6 @@ async def get_user_by_id(
             email_id=record["email_id"],
             contact_no=record["contact_no"],
             profile_image_id=record["profile_image_id"],
-            active=record["active"],
         )
     except UserNotFoundException as e:
         response.status_code = status.HTTP_404_NOT_FOUND
@@ -214,7 +212,6 @@ async def get_user_by_email_id(
             email_id=record["email_id"],
             contact_no=record["contact_no"],
             profile_image_id=record["profile_image_id"],
-            active=record["active"],
         )
     except UserNotFoundException as e:
         response.status_code = status.HTTP_404_NOT_FOUND
@@ -304,9 +301,7 @@ async def update_user_password(
         record = await UserRepository.get_by_id(connection, user_id)
         verify_password(record["password"], body.current_password)
         hashed_password = hash_password(body.new_password)
-        await UserRepository.update(
-            connection, user_id, None, hashed_password, None, None
-        )
+        await UserRepository.update(connection, user_id, hashed_password, None, None)
         response.status_code = status.HTTP_204_NO_CONTENT
         return
     except VerifyMismatchError:
@@ -375,7 +370,7 @@ async def grant_user_permissions(
 
 @router.post(
     "/{user_id}/permissions/revoke",
-    dependencies=[Depends(RequiresPermission(["user:revoke_permission"]))],
+    dependencies=[Depends(RequiresPermission("user:revoke_permission"))],
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         status.HTTP_204_NO_CONTENT: {

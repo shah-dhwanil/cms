@@ -32,7 +32,6 @@ class User(BaseModel):
     email_id: EmailStr = Field(..., max_length=64)
     contact_no: PhoneNumber = Field(..., max_length=20)
     profile_image_id: Optional[UUID] = None
-    active: bool
 
 
 class CreateUserRequest(BaseModel):
