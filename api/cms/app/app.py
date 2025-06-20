@@ -11,6 +11,7 @@ from cms.permissions.views import router as permissions_router
 from cms.sessions.views import router as sessions_router
 from cms.auth.views import router as auth_router
 from cms.students.views import router as students_router
+from cms.staff.views import router as staff_router
 from cms.auth.exceptions import (
     NotEnoughPermissionsException,
     CredentialsNotFoundException,
@@ -48,6 +49,7 @@ app.include_router(permissions_router)
 app.include_router(sessions_router)
 app.include_router(auth_router)
 app.include_router(students_router)
+app.include_router(staff_router)
 
 
 @app.get("/")

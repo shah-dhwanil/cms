@@ -111,6 +111,30 @@
         {
             "slug":"student:apaar:download",
             "description":"Download student's Apaar ID"
+        },
+        {
+            "slug": "staff:create",
+            "description": "Create a new staff member"
+        },
+        {
+            "slug": "staff:read:self",
+            "description": "Read staff information"
+        },
+        {
+            "slug": "staff:read:any",
+            "description": "Read any staff's information"
+        },
+        {
+            "slug": "staff:update:self",
+            "description": "Update staff information"
+        },
+        {
+            "slug": "staff:update:any",
+            "description": "Update any staff's information"
+        },
+        {
+            "slug": "staff:delete",
+            "description": "Delete a staff member"
         }
     ]
 }
