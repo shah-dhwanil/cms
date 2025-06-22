@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Union
 from uuid import UUID
 
 from asyncpg import Connection
@@ -14,6 +14,8 @@ from cms.auth.models import (
     NotAuthorizedExceptionResponse,
     Session,
 )
+from cms.parents.exceptions import ParentNotFoundException
+from cms.parents.models import Parent, ParentNotFoundExceptionResponse
 from cms.students.exceptions import (
     StudentAlreadyExistsException,
     StudentNotFoundException,
@@ -490,3 +492,128 @@ async def get_apaar_id(
 
     response.status_code = status.HTTP_200_OK
     return GetStudentApaarResponse(url=url)
+
+
+@router.post(
+    "/{student_id}/parent/{parent_id}",
+    dependencies=[Depends(RequiresPermission("student:link_parent"))],
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_204_NO_CONTENT: {
+            "model": None,
+            "description": "Parent linked to student successfully.",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": Union[
+                StudentNotFoundExceptionResponse, ParentNotFoundExceptionResponse
+            ],
+            "description": "Entity not found.",
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": StudentAlreadyExistsExceptionResponse,
+            "description": "Student already has a parent linked.",
+        },
+    },
+)
+async def link_parent(
+    student_id: Annotated[UUID, Path()],
+    parent_id: Annotated[UUID, Path()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    try:
+        await StudentRepository.set_parent(connection, student_id, parent_id)
+    except StudentNotFoundException as e:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return StudentNotFoundExceptionResponse(context=e.context)
+    except ParentNotFoundException as e:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return ParentNotFoundExceptionResponse(context=e.context)
+    except StudentAlreadyExistsException as e:
+        response.status_code = status.HTTP_409_CONFLICT
+        return StudentAlreadyExistsExceptionResponse(context=e.context)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return
+
+
+@router.get(
+    "/{student_id}/parent",
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "model": Parent,
+            "description": "Parent linked to student retrieved successfully.",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": Union[
+                StudentNotFoundExceptionResponse, ParentNotFoundExceptionResponse
+            ],
+            "description": "Entity not found.",
+        },
+    },
+)
+async def get_parent(
+    student_id: Annotated[UUID, Path()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    session: Annotated[Session, Depends(get_session)],
+    permissions: Annotated[
+        list[str],
+        Depends(
+            RequiresAnyOfGivenPermission(["parent:read:any"], ["parent:read:self"])
+        ),
+    ],
+    response: Response,
+):
+    if "parent:read:self" in permissions and student_id != session.user.user_id:
+        raise NotEnoughPermissionsException()
+    if not await StudentRepository.exists(connection, student_id):
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return StudentNotFoundExceptionResponse(context={"parameter": "student_id"})
+
+    record = await StudentRepository.get_parent(connection, student_id)
+    if not record:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return ParentNotFoundExceptionResponse(context={"parameter": "parent_id"})
+
+    response.status_code = status.HTTP_200_OK
+    return Parent(
+        id=record["id"],
+        fathers_name=record["fathers_name"],
+        mothers_name=record["mothers_name"],
+        fathers_email_id=record["fathers_email_id"],
+        mothers_email_id=record["mothers_email_id"],
+        fathers_contact_no=record["fathers_contact_no"],
+        mothers_contact_no=record["mothers_contact_no"],
+        address=record["address"],
+        extra_info=record["extra_info"],
+    )
+
+
+@router.delete(
+    "/{student_id}/parent/{parent_id}",
+    dependencies=[Depends(RequiresPermission("student:unlink_parent"))],
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_204_NO_CONTENT: {
+            "model": None,
+            "description": "Parent unlinked from student successfully.",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": StudentNotFoundExceptionResponse,
+            "description": "Student not found.",
+        },
+    },
+)
+async def unlink_parent(
+    student_id: Annotated[UUID, Path()],
+    parent_id: Annotated[UUID, Path()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    if not StudentRepository.exists(connection, student_id):
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return StudentNotFoundExceptionResponse(context={"parameter": "student_id"})
+
+    await StudentRepository.remove_parent(connection, student_id, parent_id)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return

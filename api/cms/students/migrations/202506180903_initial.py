@@ -3,7 +3,7 @@ dependencies = ["users.202506121032_initial"]
 
 # SQL to apply the migration
 apply = [
-    """--sql
+    """--sql    
     CREATE TABLE IF NOT EXISTS students(
         id UUID,
         first_name VARCHAR(32) NOT NULL,
@@ -16,17 +16,27 @@ apply = [
         apaar_id CHAR(12) NOT NULL,
         extra_info JSON,
         is_active BOOLEAN NOT NULL DEFAULT TRUE,
-        CONSTRAINT pk_students PRIMARY KEY (id,is_active),
-        CONSTRAINT uniq_students_aadhaar_no UNIQUE (aadhaar_no,is_active),
-        CONSTRAINT uniq_students_apaar_id UNIQUE (apaar_id,is_active),
-        CONSTRAINT fk_students_user FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+        CONSTRAINT pk_students PRIMARY KEY (id),
+        CONSTRAINT fk_students_user FOREIGN KEY (id,is_active) REFERENCES users(id,is_active) ON DELETE CASCADE ON UPDATE CASCADE
     );
-    """
+    """,
+    """--sql
+    CREATE UNIQUE INDEX uniq_students_aadhaar_no ON students(aadhaar_no,is_active) WHERE is_active;
+    """,
+    """--sql
+    CREATE UNIQUE INDEX uniq_students_apaar_id ON students(apaar_id,is_active) WHERE is_active;
+    """,
 ]
 
 # SQL to rollback the migration
 rollback = [
     """--sql
+    DROP INDEX IF EXISTS uniq_students_aadhaar_no;
+    """,
+    """--sql
+    DROP INDEX IF EXISTS uniq_students_apaar_id;
+    """,
+    """--sql
     DROP TABLE IF EXISTS students;
-    """
+    """,
 ]

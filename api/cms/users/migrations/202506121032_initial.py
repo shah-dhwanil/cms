@@ -13,15 +13,26 @@ apply = [
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP(0) WITH TIME ZONE DEFAULT now(),
         CONSTRAINT pk_users PRIMARY KEY(id),
-        CONSTRAINT uniq_users_email_id UNIQUE(email_id,is_active),
-        CONSTRAINT uniq_users_contact_no UNIQUE(contact_no,is_active)
+        CONSTRAINT uniq_users_is_active UNIQUE(id,is_active)
     );
-    """
+    """,
+    """--sql
+    CREATE UNIQUE INDEX uniq_users_email_id ON users(email_id,is_active) WHERE is_active;
+    """,
+    """--sql
+    CREATE UNIQUE INDEX uniq_users_contact_no ON users(contact_no,is_active) WHERE is_active;
+    """,
 ]
 
 # SQL to rollback the migration
 rollback = [
     """--sql
+    DROP INDEX IF EXISTS uniq_users_email_id;
+    """,
+    """--sql
+    DROP INDEX IF EXISTS uniq_users_contact_no;
+    """,
+    """--sql
     DROP TABLE IF EXISTS users;
-    """
+    """,
 ]

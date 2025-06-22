@@ -3,11 +3,13 @@ from typing import Any, Optional
 from uuid import UUID
 
 from asyncpg import Connection, ForeignKeyViolationError, UniqueViolationError
+from cms.parents.exceptions import ParentNotFoundException
 from cms.students.exceptions import (
     StudentAlreadyExistsException,
     StudentNotFoundException,
 )
 from cms.users.exceptions import UserNotFoundException
+from cms.users.repository import UserRepository
 
 __all__ = ["StudentRepository"]
 
@@ -168,12 +170,64 @@ class StudentRepository:
 
     @staticmethod
     async def delete(connection: Connection, student_id: UUID) -> None:
+        await UserRepository.delete(connection, student_id)
+
+    @staticmethod
+    async def set_parent(
+        connection: Connection, student_id: UUID, parent_id: UUID
+    ) -> None:
+        try:
+            await connection.execute(
+                """--sql
+                INSERT INTO student_parent(student_id, parent_id)
+                VALUES($1, $2);
+                """,
+                student_id,
+                parent_id,
+            )
+        except UniqueViolationError as e:
+            details = e.as_dict()
+            if details["constraint_name"] == "pk_student_parent":
+                raise StudentAlreadyExistsException(parameter="student_parent_link")
+            else:
+                raise e
+        except ForeignKeyViolationError as e:
+            details = e.as_dict()
+            if details["constraint_name"] == "fk_student_parent_students":
+                raise StudentNotFoundException(parameter="student_id")
+            elif details["constraint_name"] == "fk_student_parent_parents":
+                raise ParentNotFoundException(parameter="parent_id")
+            else:
+                raise e
+
+    @staticmethod
+    async def remove_parent(
+        connection: Connection, student_id: UUID, parent_id: UUID
+    ) -> None:
         await connection.execute(
             """--sql
-            UPDATE students
-            SET
-                is_active = FALSE
-            WHERE id = $1;
+            DELETE FROM student_parent
+            WHERE student_id = $1 AND parent_id = $2;
+            """,
+            student_id,
+            parent_id,
+        )
+
+    @staticmethod
+    async def get_parent(connection: Connection, student_id: UUID) -> Optional[UUID]:
+        record = await connection.fetchrow(
+            """--sql
+            SELECT parents.id, parents.fathers_name, parents.mothers_name, 
+                parents.fathers_email_id, parents.mothers_email_id, 
+                parents.fathers_contact_no, parents.mothers_contact_no, 
+                parents.address, parents.extra_info
+            FROM parents 
+            WHERE parents.id = (
+                SELECT parent_id FROM student_parent WHERE student_id = $1 AND is_active = TRUE
+            ) AND parents.is_active = TRUE;
             """,
             student_id,
         )
+        if record is None:
+            return None
+        return record

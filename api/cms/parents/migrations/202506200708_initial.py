@@ -15,19 +15,39 @@ apply = [
         address TEXT NOT NULL,
         extra_info JSON,
         is_active BOOLEAN DEFAULT TRUE,
-        CONSTRAINT pk_parents PRIMARY KEY (id,is_active),
-        CONSTRAINT uniq_fathers_email_id UNIQUE (fathers_email_id,is_active),
-        CONSTRAINT uniq_mothers_email_id UNIQUE (mothers_email_id,is_active),
-        CONSTRAINT uniq_fathers_contact_no UNIQUE (fathers_contact_no,is_active),
-        CONSTRAINT uniq_mothers_contact_no UNIQUE (mothers_contact_no,is_active),
-        CONSTRAINT fk_parents_users FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+        CONSTRAINT pk_parents PRIMARY KEY (id),
+        CONSTRAINT fk_parents_users FOREIGN KEY (id,is_active) REFERENCES users(id,is_active) ON DELETE CASCADE ON UPDATE CASCADE
     );
-    """
+    """,
+    """--sql
+    CREATE UNIQUE INDEX uniq_fathers_email_id ON parents(fathers_email_id,is_active) WHERE is_active;
+    """,
+    """--sql
+    CREATE UNIQUE INDEX uniq_mothers_email_id ON parents(mothers_email_id,is_active) WHERE is_active;
+    """,
+    """--sql
+    CREATE UNIQUE INDEX uniq_fathers_contact_no ON parents(fathers_contact_no,is_active) WHERE is_active;
+    """,
+    """--sql
+    CREATE UNIQUE INDEX uniq_mothers_contact_no ON parents(mothers_contact_no,is_active) WHERE is_active;
+    """,
 ]
 
 # SQL to rollback the migration
 rollback = [
     """--sql
+    DROP INDEX IF EXISTS uniq_fathers_email_id;
+    """,
+    """--sql
+    DROP INDEX IF EXISTS uniq_mothers_email_id;
+    """,
+    """--sql
+    DROP INDEX IF EXISTS uniq_fathers_contact_no;
+    """,
+    """--sql
+    DROP INDEX IF EXISTS uniq_mothers_contact_no;
+    """,
+    """--sql
     DROP TABLE IF EXISTS parents;
-    """
+    """,
 ]

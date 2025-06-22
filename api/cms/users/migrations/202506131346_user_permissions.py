@@ -14,7 +14,7 @@ apply = [
     """,
     """--sql
     CREATE INDEX IF NOT EXISTS idx_user_permissions_user_id ON user_permissions(user_id);
-    """
+    """,
 ]
 
 # SQL to rollback the migration
@@ -24,5 +24,5 @@ rollback = [
     """,
     """--sql
     DROP TABLE IF EXISTS user_permissions;
-    """
+    """,
 ]

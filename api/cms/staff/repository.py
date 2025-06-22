@@ -4,6 +4,7 @@ from uuid import UUID
 from asyncpg import Connection, ForeignKeyViolationError, UniqueViolationError
 from cms.staff.exceptions import StaffAlreadyExistsException, StaffNotFoundException
 from cms.users.exceptions import UserNotFoundException
+from cms.users.repository import UserRepository
 
 __all__ = ["StaffRepository"]
 
@@ -166,11 +167,12 @@ class StaffRepository:
 
     @staticmethod
     async def delete(connection: Connection, staff_id: UUID) -> None:
-        await connection.execute(
-            """--sql
-            UPDATE staff
-            SET is_active = FALSE
-            WHERE id = $1;
-            """,
-            staff_id,
-        )
+        # await connection.execute(
+        #     """--sql
+        #     UPDATE staff
+        #     SET is_active = FALSE
+        #     WHERE id = $1;
+        #     """,
+        #     staff_id,
+        # )
+        await UserRepository.delete(connection, staff_id)
