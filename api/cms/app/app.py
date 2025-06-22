@@ -5,6 +5,7 @@ from cms.app.middlewares import (
     RequestIDMiddleware,
 )
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from structlog import get_logger
 from cms.users.views import router as users_router
 from cms.permissions.views import router as permissions_router
@@ -31,6 +32,13 @@ app = FastAPI(
 app.add_middleware(LoggingMiddleware)
 app.add_middleware(ContextMiddleware)
 app.add_middleware(RequestIDMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+    allow_credentials=True,
+)
 app.add_exception_handler(
     NotEnoughPermissionsException,
     not_enough_permissions_exception_handler,
