@@ -135,6 +135,38 @@
         {
             "slug": "staff:delete",
             "description": "Delete a staff member"
+        },
+        {
+            "slug": "parent:create",
+            "description": "Create a new parent"
+        },
+        {
+            "slug": "parent:read:self",
+            "description": "Read parent information"
+        },
+        {
+            "slug": "parent:read:any",
+            "description": "Read any parent's information"
+        },
+        {
+            "slug": "parent:update:self",
+            "description": "Update parent information"
+        },
+        {
+            "slug": "parent:update:any",
+            "description": "Update any parent's information"
+        },
+        {
+            "slug": "parent:delete",
+            "description": "Delete a parent"
+        },
+        {
+            "slug":"student:link_parent",
+            "description":"Link a parent to a student"
+        },
+        {
+            "slug":"student:unlink_parent",
+            "description":"Unlink a parent from a student"
         }
     ]
 }
