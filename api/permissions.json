@@ -167,6 +167,26 @@
         {
             "slug":"student:unlink_parent",
             "description":"Unlink a parent from a student"
+        },
+        {
+            "slug":"school:create",
+            "description":"Create a new school"
+        },
+        {
+            "slug":"school:update:self",
+            "description":"Update school information related to the user"
+        },
+        {
+            "slug":"school:update:any",
+            "description":"Update any school's information"
+        },
+        {
+            "slug":"school:delete:self",
+            "description":"Delete the school related to the user"
+        },
+        {
+            "slug":"school:delete:any",
+            "description":"Delete a school"
         }
     ]
 }
