@@ -187,6 +187,26 @@
         {
             "slug":"school:delete:any",
             "description":"Delete a school"
+        },
+        {
+            "slug":"department:create",
+            "description":"Create a new department"
+        },
+        {
+            "slug": "department:update:self",
+            "description": "Update department information related to the user"
+        },
+        {
+            "slug": "department:update:any",
+            "description": "Update any department's information"
+        },
+        {
+            "slug": "department:delete:self",
+            "description": "Delete the department related to the user"
+        },
+        {
+            "slug": "department:delete:any",
+            "description": "Delete a department"
         }
     ]
 }
