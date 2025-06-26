@@ -130,6 +130,46 @@ async def get_all_schools(
 
 
 @router.get(
+    "/search",
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "model": ListSchoolResponse,
+            "description": "School details retrieved successfully by name.",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": SchoolNotFoundExceptionResponse,
+            "description": "School not found by name.",
+        },
+    },
+)
+async def search_school_by_name(
+    name: Annotated[str, Query()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    try:
+        records = await SchoolRepository.get_by_name(connection, name)
+        response.status_code = status.HTTP_200_OK
+        return ListSchoolResponse(
+            schools=[
+                School(
+                    school_id=record["id"],
+                    name=record["name"],
+                    dean_id=record["dean_id"],
+                    extra_info=record["extra_info"],
+                )
+                for record in records
+            ]
+        )
+    except SchoolNotFoundException as e:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return SchoolNotFoundExceptionResponse(
+            slug=e.slug, description=e.description, context=e.context
+        )
+
+
+@router.get(
     "/{school_id}",
     status_code=status.HTTP_200_OK,
     responses={
@@ -156,46 +196,6 @@ async def get_school_by_id(
             name=record["name"],
             dean_id=record["dean_id"],
             extra_info=record["extra_info"],
-        )
-    except SchoolNotFoundException as e:
-        response.status_code = status.HTTP_404_NOT_FOUND
-        return SchoolNotFoundExceptionResponse(
-            slug=e.slug, description=e.description, context=e.context
-        )
-
-
-@router.get(
-    "/search_by_name/{name}",
-    status_code=status.HTTP_200_OK,
-    responses={
-        status.HTTP_200_OK: {
-            "model": ListSchoolResponse,
-            "description": "School details retrieved successfully by name.",
-        },
-        status.HTTP_404_NOT_FOUND: {
-            "model": SchoolNotFoundExceptionResponse,
-            "description": "School not found by name.",
-        },
-    },
-)
-async def search_school_by_name(
-    name: Annotated[str, Path()],
-    connection: Annotated[Connection, Depends(PgPool.get_connection)],
-    response: Response,
-):
-    try:
-        records = await SchoolRepository.get_by_name(connection, name)
-        response.status_code = status.HTTP_200_OK
-        return ListSchoolResponse(
-            schools=[
-                School(
-                    school_id=record["id"],
-                    name=record["name"],
-                    dean_id=record["dean_id"],
-                    extra_info=record["extra_info"],
-                )
-                for record in records
-            ]
         )
     except SchoolNotFoundException as e:
         response.status_code = status.HTTP_404_NOT_FOUND
