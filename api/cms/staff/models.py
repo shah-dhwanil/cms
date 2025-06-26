@@ -25,7 +25,7 @@ class Staff(BaseModel):
     first_name: str = Field(..., max_length=32)
     last_name: str = Field(..., max_length=32)
     email_id: Optional[EmailStr] = None
-    contact_no: PhoneNumber = (Field(..., max_length=20),)
+    contact_no: PhoneNumber = Field(..., max_length=20)
     position: str = Field(..., max_length=64)
     education: Dict[str, Any]
     experience: Dict[str, Any]
@@ -64,6 +64,15 @@ class UpdateStaffRequest(BaseModel):
 
 class ListStaffResponse(BaseModel):
     staff: List[Staff] = Field(..., description="List of staff members")
+
+
+class SetDepartmentRequest(BaseModel):
+    department_id: UUID
+
+
+class DepartmentResponse(BaseModel):
+    id: UUID
+    name: str
 
 
 class StaffNotFoundExceptionResponse(BaseModel):

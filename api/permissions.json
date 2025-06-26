@@ -207,6 +207,14 @@
         {
             "slug": "department:delete:any",
             "description": "Delete a department"
+        },
+        {
+            "slug":"staff:link_department",
+            "description":"Link a staff member to a department"
+        },
+        {
+            "slug":"staff:unlink_department",
+            "description":"Unlink a staff member from a department"
         }
     ]
 }

@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Union
 from uuid import UUID
 
 from asyncpg import Connection
@@ -13,6 +13,8 @@ from cms.auth.models import (
     NotAuthorizedExceptionResponse,
     Session,
 )
+from cms.departments.exceptions import DepartmentNotFoundException
+from cms.departments.models import DepartmentNotFoundExceptionResponse
 from cms.staff.exceptions import (
     StaffAlreadyExistsException,
     StaffNotFoundException,
@@ -20,7 +22,9 @@ from cms.staff.exceptions import (
 from cms.staff.models import (
     CreateStaffRequest,
     CreateStaffResponse,
+    DepartmentResponse,
     ListStaffResponse,
+    SetDepartmentRequest,
     Staff,
     StaffAlreadyExistsExceptionResponse,
     StaffNotFoundExceptionResponse,
@@ -314,3 +318,113 @@ async def delete_staff(
     await StaffRepository.delete(connection, staff_id)
     response.status_code = status.HTTP_204_NO_CONTENT
     return
+
+
+@router.post(
+    "/{staff_id}/department",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(RequiresPermission("staff:link_department"))],
+    responses={
+        status.HTTP_204_NO_CONTENT: {
+            "model": None,
+            "description": "Department linked to staff successfully.",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": Union[
+                StaffNotFoundExceptionResponse,
+                DepartmentNotFoundExceptionResponse,
+            ],
+            "description": "Staff or Department not found.",
+        },
+    },
+)
+async def link_department(
+    staff_id: Annotated[UUID, Path()],
+    body: Annotated[SetDepartmentRequest, Body()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    try:
+        await StaffRepository.link_department(connection, staff_id, body.department_id)
+        response.status_code = status.HTTP_204_NO_CONTENT
+        return
+    except StaffNotFoundException as e:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return StaffNotFoundExceptionResponse(context=e.context)
+    except DepartmentNotFoundException as e:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return DepartmentNotFoundExceptionResponse(context=e.context)
+
+
+@router.delete(
+    "/{staff_id}/department",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(RequiresPermission("staff:unlink_department"))],
+    responses={
+        status.HTTP_204_NO_CONTENT: {
+            "model": None,
+            "description": "Department unlinked from staff successfully.",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": StaffNotFoundExceptionResponse,
+            "description": "Staff not found.",
+        },
+    },
+)
+async def unlink_department(
+    staff_id: Annotated[UUID, Path()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    if not await StaffRepository.exists(connection, staff_id):
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return StaffNotFoundExceptionResponse(context={"parameter": "staff_id"})
+    await StaffRepository.unlink_department(connection, staff_id)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return
+
+
+@router.get(
+    "/{staff_id}/department",
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "model": DepartmentResponse,
+            "description": "Department linked to staff retrieved successfully.",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": Union[
+                StaffNotFoundExceptionResponse, DepartmentNotFoundExceptionResponse
+            ],
+            "description": "Staff or Department not found.",
+        },
+    },
+)
+async def get_department(
+    staff_id: Annotated[UUID, Path()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    session: Annotated[Session, Depends(get_session)],
+    permissions: Annotated[
+        list[str],
+        Depends(RequiresAnyOfGivenPermission(["staff:read:any"], ["staff:read:self"])),
+    ],
+    response: Response,
+):
+    # Check if staff is accessing their own data or has permission to read any staff
+    if "staff:read:self" in permissions and staff_id != session.user.user_id:
+        raise NotEnoughPermissionsException()
+    department = await StaffRepository.get_department(connection, staff_id)
+    if department is None:
+        if not await StaffRepository.exists(connection, staff_id):
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return StaffNotFoundExceptionResponse(context={"parameter": "staff_id"})
+        else:
+            response.status_code = status.HTTP_404_NOT_FOUND
+            return DepartmentNotFoundExceptionResponse(
+                context={"parameter": "staff_id"}
+            )
+    response.status_code = status.HTTP_200_OK
+    return DepartmentResponse(
+        id=department["id"],
+        name=department["name"],
+    )

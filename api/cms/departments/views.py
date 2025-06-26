@@ -30,7 +30,7 @@ from cms.departments.repository import DepartmentRepository
 from cms.schools.exceptions import SchoolNotFoundException
 from cms.schools.models import SchoolNotFoundExceptionResponse
 from cms.staff.exceptions import StaffNotFoundException
-from cms.staff.models import StaffNotFoundExceptionResponse
+from cms.staff.models import ListStaffResponse, Staff, StaffNotFoundExceptionResponse
 from cms.utils.postgres import PgPool
 from fastapi import APIRouter, Body, Depends, Path, Query, Response, status
 
@@ -347,3 +347,96 @@ async def delete_department(
             return
     await DepartmentRepository.delete(connection, department_id)
     response.status_code = status.HTTP_204_NO_CONTENT
+
+
+@router.get(
+    "/{department_id}/staff/public",
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "model": ListDepartmentResponse,
+            "description": "List of public staff in the department.",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": DepartmentNotFoundExceptionResponse,
+            "description": "Department not found.",
+        },
+    },
+)
+async def get_public_staff_in_department(
+    department_id: Annotated[UUID, Path()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    if not await DepartmentRepository.exists(connection, department_id):
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return DepartmentNotFoundExceptionResponse(
+            context={"parameter": "department_id"},
+        )
+    records = await DepartmentRepository.get_public_staff(connection, department_id)
+    response.status_code = status.HTTP_200_OK
+    return ListStaffResponse(
+        staff=[
+            Staff(
+                id=record["id"],
+                first_name=record["first_name"],
+                last_name=record["last_name"],
+                email_id=record["email_id"],
+                contact_no=record["contact_no"],
+                position=record["position"],
+                education=record["education"],
+                experience=record["experience"],
+                activity=record["activity"],
+                other_details=record["other_details"],
+                is_public=record["is_public"],
+            )
+            for record in records
+        ]
+    )
+
+
+@router.get(
+    "/{department_id}/staff",
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(RequiresPermission("staff:read:any"))],
+    responses={
+        status.HTTP_200_OK: {
+            "model": ListStaffResponse,
+            "description": "List of staff in the department.",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": DepartmentNotFoundExceptionResponse,
+            "description": "Department not found.",
+        },
+    },
+)
+async def get_all_staff_in_department(
+    department_id: Annotated[UUID, Path()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    if not await DepartmentRepository.exists(connection, department_id):
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return DepartmentNotFoundExceptionResponse(
+            context={"parameter": "department_id"},
+        )
+    records = await DepartmentRepository.get_staff(connection, department_id)
+    response.status_code = status.HTTP_200_OK
+    return ListStaffResponse(
+        staff=[
+            Staff(
+                id=record["id"],
+                first_name=record["first_name"],
+                last_name=record["last_name"],
+                email_id=record["email_id"],
+                contact_no=record["contact_no"],
+                position=record["position"],
+                education=record["education"],
+                experience=record["experience"],
+                activity=record["activity"],
+                other_details=record["other_details"],
+                is_public=record["is_public"],
+            )
+            for record in records
+        ]
+    )

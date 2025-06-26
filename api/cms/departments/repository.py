@@ -187,3 +187,49 @@ class DepartmentRepository:
             """,
             uid,
         )
+
+    @staticmethod
+    async def get_public_staff(
+        connection: Connection, department_id: UUID, limit: int = 100, offset: int = 0
+    ) -> list[dict[str, Any]]:
+        records = await connection.fetch(
+            """--sql
+            SELECT staff.id, staff.first_name, staff.last_name, users.email_id, users.contact_no,
+                staff.position, staff.education, staff.experience, staff.activity,
+                staff.other_details, staff.is_public, staff.is_active
+            FROM staff
+            INNER JOIN users ON staff.id = users.id  AND users.is_active = TRUE
+            WHERE staff.id IN (
+                SELECT staff_id FROM staff_department WHERE department_id = $1
+            ) AND staff.is_active = TRUE AND staff.is_public = TRUE
+            ORDER BY last_name ASC, first_name ASC
+            LIMIT $2 OFFSET $3;
+            """,
+            department_id,
+            limit,
+            offset,
+        )
+        return records
+
+    @staticmethod
+    async def get_staff(
+        connection: Connection, department_id: UUID, limit: int = 100, offset: int = 0
+    ) -> list[dict[str, Any]]:
+        records = await connection.fetch(
+            """--sql
+            SELECT staff.id, staff.first_name, staff.last_name, users.email_id, users.contact_no,
+                staff.position, staff.education, staff.experience, staff.activity,
+                staff.other_details, staff.is_public, staff.is_active
+            FROM staff
+            INNER JOIN users ON staff.id = users.id  AND users.is_active = TRUE
+            WHERE staff.id IN (
+                SELECT staff_id FROM staff_department WHERE department_id = $1
+            ) AND staff.is_active = TRUE
+            ORDER BY last_name ASC, first_name ASC
+            LIMIT $2 OFFSET $3;
+            """,
+            department_id,
+            limit,
+            offset,
+        )
+        return records

@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional
 from uuid import UUID
 
 from asyncpg import Connection, ForeignKeyViolationError, UniqueViolationError
+from cms.departments.exceptions import DepartmentNotFoundException
 from cms.staff.exceptions import StaffAlreadyExistsException, StaffNotFoundException
 from cms.users.exceptions import UserNotFoundException
 from cms.users.repository import UserRepository
@@ -176,3 +177,50 @@ class StaffRepository:
         #     staff_id,
         # )
         await UserRepository.delete(connection, staff_id)
+
+    @staticmethod
+    async def link_department(
+        connection: Connection, staff_id: UUID, department_id: UUID
+    ) -> None:
+        try:
+            await connection.execute(
+                """--sql
+                INSERT INTO staff_department(staff_id, department_id)
+                VALUES($1, $2)
+                ON CONFLICT (staff_id) DO UPDATE SET department_id = EXCLUDED.department_id;
+                """,
+                staff_id,
+                department_id,
+            )
+        except ForeignKeyViolationError as e:
+            details = e.as_dict()
+            if details["constraint_name"] == "fk_staff_department_staff":
+                raise StaffNotFoundException(parameter="staff_id")
+            elif details["constraint_name"] == "fk_staff_department_department":
+                raise DepartmentNotFoundException(parameter="department_id")
+            else:
+                raise e
+
+    @staticmethod
+    async def unlink_department(connection: Connection, staff_id: UUID) -> None:
+        await connection.execute(
+            """--sql
+            DELETE FROM staff_department
+            WHERE staff_id = $1;
+            """,
+            staff_id,
+        )
+
+    @staticmethod
+    async def get_department(
+        connection: Connection, staff_id: UUID
+    ) -> Optional[dict[str, Any]]:
+        department = await connection.fetchrow(
+            """--sql
+            SELECT department.id, department.name FROM staff_department
+            INNER JOIN department ON staff_department.department_id = department.id AND department.is_active = TRUE
+            WHERE staff_id = $1;
+            """,
+            staff_id,
+        )
+        return department
