@@ -215,6 +215,18 @@
         {
             "slug":"staff:unlink_department",
             "description":"Unlink a staff member from a department"
+        },
+        {
+            "slug":"program:create",
+            "description":"Create a new program"
+        },
+        {
+            "slug":"program:update",
+            "description":"Update any program's information"
+        },
+        {
+            "slug":"program:delete",
+            "description":"Delete a program"
         }
     ]
 }
