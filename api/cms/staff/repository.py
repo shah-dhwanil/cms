@@ -217,8 +217,8 @@ class StaffRepository:
     ) -> Optional[dict[str, Any]]:
         department = await connection.fetchrow(
             """--sql
-            SELECT department.id, department.name FROM staff_department
-            INNER JOIN department ON staff_department.department_id = department.id AND department.is_active = TRUE
+            SELECT departments.id, departments.name FROM staff_department
+            INNER JOIN departments ON staff_department.department_id = departments.id AND departments.is_active = TRUE
             WHERE staff_id = $1;
             """,
             staff_id,

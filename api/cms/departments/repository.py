@@ -26,7 +26,7 @@ class DepartmentRepository:
         try:
             await connection.execute(
                 """
-                INSERT INTO department(
+                INSERT INTO departments(
                     id, name, school_id, head_id, extra_info
                 )
                 VALUES($1, initcap($2), $3, $4, $5);
@@ -41,9 +41,9 @@ class DepartmentRepository:
         except UniqueViolationError as e:
             details = e.as_dict()
             match details["constraint_name"]:
-                case "uniq_department_name":
+                case "uniq_departments_name":
                     raise DepartmentAlreadyExistsException(parameter="name")
-                case "uniq_department_head_id":
+                case "uniq_departments_head_id":
                     raise DepartmentAlreadyExistsException(parameter="head_id")
                 case _:
                     raise Exception(details)
@@ -62,7 +62,7 @@ class DepartmentRepository:
         result = await connection.fetchval(
             """--sql
             SELECT EXISTS(
-                SELECT 1 FROM department WHERE id = $1 AND is_active = TRUE
+                SELECT 1 FROM departments WHERE id = $1 AND is_active = TRUE
             );
             """,
             uid,
@@ -74,7 +74,7 @@ class DepartmentRepository:
         record = await connection.fetchrow(
             """--sql
             SELECT id, name, school_id, head_id, extra_info, is_active
-            FROM department
+            FROM departments
             WHERE id = $1 AND is_active = TRUE;
             """,
             uid,
@@ -89,7 +89,7 @@ class DepartmentRepository:
         record = await connection.fetch(
             """--sql
             SELECT id, name, school_id, head_id, extra_info, is_active
-            FROM department
+            FROM departments
             WHERE name ILIKE $1 AND is_active = TRUE;
             """,
             name,
@@ -103,7 +103,7 @@ class DepartmentRepository:
         records = await connection.fetch(
             """--sql
             SELECT id, name, school_id, head_id, extra_info, is_active
-            FROM department
+            FROM departments
             WHERE school_id = $1 AND is_active = TRUE
             ORDER BY name ASC
             LIMIT $2 OFFSET $3;
@@ -121,7 +121,7 @@ class DepartmentRepository:
         records = await connection.fetch(
             """--sql
             SELECT id, name, school_id, head_id, extra_info, is_active
-            FROM department
+            FROM departments
             WHERE is_active = TRUE
             ORDER BY name ASC
             LIMIT $1 OFFSET $2;
@@ -143,7 +143,7 @@ class DepartmentRepository:
         try:
             response = await connection.execute(
                 """--sql
-                UPDATE department
+                UPDATE departments
                 SET name = COALESCE(initcap($2), name),
                     school_id = COALESCE($3, school_id),
                     head_id = COALESCE($4, head_id),
@@ -161,9 +161,9 @@ class DepartmentRepository:
         except UniqueViolationError as e:
             details = e.as_dict()
             match details["constraint_name"]:
-                case "uniq_department_name":
+                case "uniq_departments_name":
                     raise DepartmentAlreadyExistsException(parameter="name")
-                case "uniq_department_head_id":
+                case "uniq_departments_head_id":
                     raise DepartmentAlreadyExistsException(parameter="head_id")
                 case _:
                     raise Exception(details)
@@ -181,7 +181,7 @@ class DepartmentRepository:
     async def delete(connection: Connection, uid: UUID) -> None:
         await connection.execute(
             """--sql
-            UPDATE department
+            UPDATE departments
             SET is_active = FALSE
             WHERE id = $1 AND is_active = TRUE;
             """,

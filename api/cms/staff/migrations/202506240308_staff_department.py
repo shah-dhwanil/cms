@@ -9,7 +9,7 @@ apply = [
         department_id UUID NOT NULL,
         CONSTRAINT pk_staff_department PRIMARY KEY (staff_id),
         CONSTRAINT fk_staff_department_staff FOREIGN KEY (staff_id) REFERENCES staff (id) ON DELETE CASCADE,
-        CONSTRAINT fk_staff_department_department FOREIGN KEY (department_id) REFERENCES department (id) ON DELETE CASCADE
+        CONSTRAINT fk_staff_department_department FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE CASCADE
     );
     """,
     """--sql

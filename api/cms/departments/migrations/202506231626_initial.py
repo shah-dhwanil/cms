@@ -5,7 +5,7 @@ dependencies = ["schools.202506231302_initial","staff.202506200509_initial"]
 # SQL to apply the migration
 apply = [
     """--sql
-    CREATE TABLE IF NOT EXISTS department (
+    CREATE TABLE IF NOT EXISTS departments (
         id UUID,
         name VARCHAR(128) NOT NULL,
         school_id UUID NOT NULL,
@@ -18,28 +18,28 @@ apply = [
     );
     """,
     """--sql
-    CREATE UNIQUE INDEX IF NOT EXISTS uniq_department_name ON department (name) WHERE is_active;
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_departments_name ON departments (name) WHERE is_active;
     """,
     """--sql
-    CREATE UNIQUE INDEX IF NOT EXISTS uniq_department_head_id ON department (head_id) WHERE is_active;
+    CREATE UNIQUE INDEX IF NOT EXISTS uniq_departments_head_id ON departments (head_id) WHERE is_active;
     """,
     """--sql
-    CREATE INDEX IF NOT EXISTS idx_department_school_id ON department (school_id);
+    CREATE INDEX IF NOT EXISTS idx_departments_school_id ON departments (school_id);
     """,
 ]
 
 # SQL to rollback the migration
 rollback = [
     """--sql
-    DROP INDEX IF EXISTS uniq_department_name;
+    DROP INDEX IF EXISTS uniq_departments_name;
     """,
     """--sql
-    DROP INDEX IF EXISTS uniq_department_head_id;
+    DROP INDEX IF EXISTS uniq_departments_head_id;
     """,
     """--sql
-    DROP INDEX IF EXISTS idx_department_school_id;
+    DROP INDEX IF EXISTS idx_departments_school_id;
     """,
     """--sql
-    DROP TABLE IF EXISTS department;
+    DROP TABLE IF EXISTS departments;
     """
 ]
