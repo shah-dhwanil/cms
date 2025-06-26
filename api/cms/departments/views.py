@@ -37,12 +37,13 @@ from fastapi import APIRouter, Body, Depends, Path, Query, Response, status
 __all__ = [
     "router",
     "create_department",
-    "get_all_departments",
+    "get_departments",
     "get_department_by_id",
-    "search_department_by_name",
-    "get_departments_by_school_id",
+    "search",
     "update_department",
     "delete_department",
+    "get_public_staff_in_department",
+    "get_all_staff_in_department",
 ]
 
 router = APIRouter(
@@ -118,13 +119,50 @@ async def create_department(
         },
     },
 )
-async def get_all_departments(
+async def get_departments(
     connection: Annotated[Connection, Depends(PgPool.get_connection)],
     response: Response,
+    school_id: Annotated[Optional[UUID], Query()] = None,
     offset: Annotated[Optional[int], Query()] = 0,
     limit: Annotated[Optional[int], Query()] = 100,
 ):
-    records = await DepartmentRepository.get_all(connection, limit, offset)
+    if school_id:
+        records = await DepartmentRepository.get_by_school_id(
+            connection, school_id, limit, offset
+        )
+    else:
+        records = await DepartmentRepository.get_all(connection, limit, offset)
+    response.status_code = status.HTTP_200_OK
+    return ListDepartmentResponse(
+        departments=[
+            Department(
+                id=record["id"],
+                name=record["name"],
+                school_id=record["school_id"],
+                head_id=record["head_id"],
+                extra_info=record["extra_info"],
+            )
+            for record in records
+        ]
+    )
+
+
+@router.get(
+    "/search",
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "model": ListDepartmentResponse,
+            "description": "Department details retrieved successfully.",
+        },
+    },
+)
+async def search(
+    name: Annotated[str, Query()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    records = await DepartmentRepository.get_by_name(connection, name)
     response.status_code = status.HTTP_200_OK
     return ListDepartmentResponse(
         departments=[
@@ -174,72 +212,6 @@ async def get_department_by_id(
         return DepartmentNotFoundExceptionResponse(
             slug=e.slug, description=e.description, context=e.context
         )
-
-
-@router.get(
-    "/search_by_name/{name}",
-    status_code=status.HTTP_200_OK,
-    responses={
-        status.HTTP_200_OK: {
-            "model": ListDepartmentResponse,
-            "description": "Department details retrieved successfully by name.",
-        },
-    },
-)
-async def search_department_by_name(
-    name: Annotated[str, Path()],
-    connection: Annotated[Connection, Depends(PgPool.get_connection)],
-    response: Response,
-):
-    records = await DepartmentRepository.get_by_name(connection, name)
-    response.status_code = status.HTTP_200_OK
-    return ListDepartmentResponse(
-        departments=[
-            Department(
-                id=record["id"],
-                name=record["name"],
-                school_id=record["school_id"],
-                head_id=record["head_id"],
-                extra_info=record["extra_info"],
-            )
-            for record in records
-        ]
-    )
-
-
-@router.get(
-    "/school/{school_id}",
-    status_code=status.HTTP_200_OK,
-    responses={
-        status.HTTP_200_OK: {
-            "model": ListDepartmentResponse,
-            "description": "List of departments in a school.",
-        },
-    },
-)
-async def get_departments_by_school_id(
-    school_id: Annotated[UUID, Path()],
-    connection: Annotated[Connection, Depends(PgPool.get_connection)],
-    response: Response,
-    offset: Annotated[Optional[int], Query()] = 0,
-    limit: Annotated[Optional[int], Query()] = 100,
-):
-    records = await DepartmentRepository.get_by_school_id(
-        connection, school_id, limit, offset
-    )
-    response.status_code = status.HTTP_200_OK
-    return ListDepartmentResponse(
-        departments=[
-            Department(
-                id=record["id"],
-                name=record["name"],
-                school_id=record["school_id"],
-                head_id=record["head_id"],
-                extra_info=record["extra_info"],
-            )
-            for record in records
-        ]
-    )
 
 
 @router.patch(
