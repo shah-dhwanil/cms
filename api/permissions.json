@@ -227,6 +227,22 @@
         {
             "slug":"program:delete",
             "description":"Delete a program"
+        },
+        {
+            "slug":"batch:create",
+            "description":"Create a new batch"
+        },
+        {
+            "slug":"batch:read",
+            "description":"Read batch information"
+        },
+        {
+            "slug":"batch:update",
+            "description":"Update any batch's information"
+        },
+        {
+            "slug":"batch:delete",
+            "description":"Delete a batch"
         }
     ]
 }
