@@ -24,6 +24,7 @@ class Config(BaseModel):
     ARGON_PARALLELISM: int
     ARGON_SALT_LENGTH: int
     ARGON_HASH_LENGTH: int
+    ENROLLMENT_NO_FORMAT:str
 
     @classmethod
     def load_config(cls):

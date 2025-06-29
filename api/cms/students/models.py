@@ -94,3 +94,25 @@ class StudentAlreadyExistsExceptionResponse(BaseModel):
     slug: str = StudentAlreadyExistsException.slug
     description: str = StudentAlreadyExistsException.description
     context: dict
+
+
+class StudentEnrollRequest(BaseModel):
+    batch_id: UUID
+
+
+class StudentEnrollResponse(BaseModel):
+    enrollment_no: str
+
+
+class ListStudentEnrollmentResponse(BaseModel):
+    class Enrollment(BaseModel):
+        enrollment_no: str
+        batch_id: UUID
+        batch_name: str
+        batch_code: str
+        year: int
+        program_name: str
+
+    enrollments: List[Enrollment] = Field(
+        ..., description="List of student enrollments"
+    )

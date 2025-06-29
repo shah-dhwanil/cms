@@ -26,20 +26,24 @@ class BatchRepository:
     ) -> UUID:
         uid = uuid7()
         try:
-            await connection.execute(
-                """
-                INSERT INTO batch(
-                    id, code, program_id, name, year, extra_info
+            async with connection.transaction():
+                await connection.execute(
+                    """
+                    INSERT INTO batch(
+                        id, code, program_id, name, year, extra_info
+                    )
+                    VALUES($1, $2, $3, $4, $5, $6);
+                    """,
+                    uid,
+                    code,
+                    program_id,
+                    name,
+                    year,
+                    extra_info,
                 )
-                VALUES($1, $2, $3, $4, $5, $6);
-                """,
-                uid,
-                code,
-                program_id,
-                name,
-                year,
-                extra_info,
-            )
+                seq_name = "_" + str(uid).replace("-", "_") + "_"
+                query = f"CREATE SEQUENCE {seq_name};"
+                await connection.execute(query)
             return uid
         except UniqueViolationError as e:
             details = e.as_dict()
@@ -204,7 +208,7 @@ class BatchRepository:
                 case "uniq_batch_code":
                     raise BatchAlreadyExistsException(parameter="code")
                 case "uniq_batch_name":
-                    raise BatchAlreadyExistsException(parameter="name")
+                    raise BatchAlreadyExistsException(parameter="program+year+name")
                 case _:
                     raise Exception(details)
         except ForeignKeyViolationError as e:
@@ -225,3 +229,20 @@ class BatchRepository:
             """,
             uid,
         )
+
+    @staticmethod
+    async def get_student_enrolled(
+        connection: Connection,
+        batch_id: UUID,
+    ) -> list[dict[str, Any]]:
+        records = await connection.fetch(
+            """--sql
+            SELECT students.id, students.first_name, students.middle_name, students.last_name, student_batch.enrollment_no
+            FROM student_batch
+            INNER JOIN students ON student_batch.student_id = students.id AND students.is_active = TRUE
+            WHERE student_batch.batch_id = $1 AND student_batch.is_active = TRUE
+            ORDER BY student_batch.enrollment_no ASC;
+            """,
+            batch_id,
+        )
+        return records

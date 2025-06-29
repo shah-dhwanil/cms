@@ -76,3 +76,16 @@ class BatchAlreadyExistsExceptionResponse(BaseModel):
     slug: str = BatchAlreadyExistsException.slug
     description: str = BatchAlreadyExistsException.description
     context: dict
+
+
+class ListEnrolledStudentsResponse(BaseModel):
+    class Student(BaseModel):
+        id: UUID
+        enrollment_no: str
+        first_name: str
+        middle_name: str
+        last_name: str
+
+    students: List[Student] = Field(
+        ..., description="List of enrolled students in the batch"
+    )

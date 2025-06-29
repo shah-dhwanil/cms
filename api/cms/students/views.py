@@ -14,6 +14,8 @@ from cms.auth.models import (
     NotAuthorizedExceptionResponse,
     Session,
 )
+from cms.batch.exceptions import BatchNotFoundException
+from cms.batch.models import BatchNotFoundExceptionResponse
 from cms.parents.exceptions import ParentNotFoundException
 from cms.parents.models import Parent, ParentNotFoundExceptionResponse
 from cms.students.exceptions import (
@@ -25,9 +27,12 @@ from cms.students.models import (
     CreateStudentResponse,
     GetStudentAdhaarResponse,
     GetStudentApaarResponse,
+    ListStudentEnrollmentResponse,
     ListStudentResponse,
     Student,
     StudentAlreadyExistsExceptionResponse,
+    StudentEnrollRequest,
+    StudentEnrollResponse,
     StudentNotFoundExceptionResponse,
     UpdateStudentRequest,
 )
@@ -615,5 +620,100 @@ async def unlink_parent(
         return StudentNotFoundExceptionResponse(context={"parameter": "student_id"})
 
     await StudentRepository.remove_parent(connection, student_id, parent_id)
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return
+
+
+@router.post(
+    "/{student_id}/enrollment",
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        status.HTTP_201_CREATED: {
+            "model": StudentEnrollResponse,
+            "description": "Student enrolled in batch successfully.",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": Union[
+                StudentNotFoundExceptionResponse, BatchNotFoundExceptionResponse
+            ],
+            "description": "Entity not found.",
+        },
+        status.HTTP_409_CONFLICT: {
+            "model": StudentAlreadyExistsExceptionResponse,
+            "description": "Student already enrolled in the batch.",
+        },
+    },
+)
+async def enroll_student(
+    student_id: Annotated[UUID, Path()],
+    body: Annotated[StudentEnrollRequest, Body()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    try:
+        enrollment_no = await StudentRepository.enroll_student(
+            connection, student_id, body.batch_id
+        )
+        response.status_code = status.HTTP_201_CREATED
+        return StudentEnrollResponse(enrollment_no=enrollment_no)
+    except StudentNotFoundException as e:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return StudentNotFoundExceptionResponse(context=e.context)
+    except BatchNotFoundException as e:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return BatchNotFoundExceptionResponse(context=e.context)
+    except StudentAlreadyExistsException as e:
+        response.status_code = status.HTTP_409_CONFLICT
+        return StudentAlreadyExistsExceptionResponse(context=e.context)
+
+
+@router.get(
+    "/{student_id}/enrollment",
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "model": ListStudentEnrollmentResponse,
+            "description": "List of student enrollments retrieved successfully.",
+        }
+    },
+)
+async def get_student_batches(
+    student_id: Annotated[UUID, Path()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    enrollments = await StudentRepository.get_enrollments(connection, student_id)
+    return ListStudentEnrollmentResponse(
+        enrollments=[
+            ListStudentEnrollmentResponse.Enrollment(
+                enrollment_no=enrollment["enrollment_no"],
+                batch_id=enrollment["batch_id"],
+                batch_name=enrollment["batch_name"],
+                batch_code=enrollment["batch_code"],
+                year=enrollment["year"],
+                program_name=enrollment["program_name"],
+            )
+            for enrollment in enrollments
+        ]
+    )
+
+
+@router.delete(
+    "/{student_id}/enrollment/{batch_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        status.HTTP_204_NO_CONTENT: {
+            "model": None,
+            "description": "Student enrollment deleted successfully.",
+        },
+    },
+)
+async def delete_student_enrollment(
+    student_id: Annotated[UUID, Path()],
+    batch_id: Annotated[UUID, Path()],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    await StudentRepository.delete_student_enrollment(connection, student_id, batch_id)
     response.status_code = status.HTTP_204_NO_CONTENT
     return

@@ -21,6 +21,7 @@ from cms.batch.models import (
     CreateBatchResponse,
     GetBatchRequest,
     ListBatchResponse,
+    ListEnrolledStudentsResponse,
     UpdateBatchRequest,
 )
 from cms.batch.repository import BatchRepository
@@ -257,3 +258,43 @@ async def delete_batch(
 ):
     await BatchRepository.delete(connection, batch_id)
     response.status_code = status.HTTP_204_NO_CONTENT
+
+
+@router.get(
+    "/{batch_id}/students",
+    dependencies=[Depends(RequiresPermission("batch:read"))],
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "model": ListEnrolledStudentsResponse,
+            "description": "List of students enrolled in the batch.",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": BatchNotFoundExceptionResponse,
+            "description": "Batch not found.",
+        },
+    },
+)
+async def get_enrolled_students(
+    batch_id: Annotated[UUID, Path(description="Batch ID")],
+    connection: Annotated[Connection, Depends(PgPool.get_connection)],
+    response: Response,
+):
+    try:
+        students = await BatchRepository.get_student_enrolled(connection, batch_id)
+        response.status_code = status.HTTP_200_OK
+        return ListEnrolledStudentsResponse(
+            students=[
+                ListEnrolledStudentsResponse.Student(
+                    id=student["id"],
+                    enrollment_no=student["enrollment_no"],
+                    first_name=student["first_name"],
+                    middle_name=student["middle_name"],
+                    last_name=student["last_name"],
+                )
+                for student in students
+            ]
+        )
+    except BatchNotFoundException as e:
+        response.status_code = status.HTTP_404_NOT_FOUND
+        return BatchNotFoundExceptionResponse(context=e.context)

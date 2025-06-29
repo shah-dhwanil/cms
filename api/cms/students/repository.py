@@ -3,13 +3,17 @@ from typing import Any, Optional
 from uuid import UUID
 
 from asyncpg import Connection, ForeignKeyViolationError, UniqueViolationError
+from cms.batch.exceptions import BatchNotFoundException
+from cms.batch.repository import BatchRepository
 from cms.parents.exceptions import ParentNotFoundException
 from cms.students.exceptions import (
     StudentAlreadyExistsException,
     StudentNotFoundException,
 )
+from cms.students.utils import generate_enrollment_no
 from cms.users.exceptions import UserNotFoundException
 from cms.users.repository import UserRepository
+from uuid_utils.compat import uuid7
 
 __all__ = ["StudentRepository"]
 
@@ -231,3 +235,95 @@ class StudentRepository:
         if record is None:
             return None
         return record
+
+    @staticmethod
+    async def enroll_student(
+        connection: Connection,
+        student_id: UUID,
+        batch_id: UUID,
+    ) -> str:
+        uid = uuid7()
+        try:
+            async with connection.transaction():
+                batch = await BatchRepository.get_by_id(connection, batch_id)
+                await connection.execute(
+                    """--sql
+                    INSERT INTO student_batch(student_id, batch_id, enrollment_no)
+                    VALUES($1, $2, $3);
+                    """,
+                    student_id,
+                    batch_id,
+                    str(uid),
+                )
+                seq_name = "_" + str(batch_id).replace("-", "_") + "_"
+                serial_no = await connection.fetchval("SELECT nextval($1)", seq_name)
+                enrollment_no = generate_enrollment_no(
+                    batch["code"],
+                    batch["year"],
+                    batch["name"],
+                    batch["program_name"],
+                    serial_no,
+                )
+                response = await connection.execute(
+                    """--sql
+                    UPDATE student_batch
+                    SET enrollment_no = $1
+                    WHERE enrollment_no = $2
+                    """,
+                    enrollment_no,
+                    str(uid),
+                )
+                if response != "UPDATE 1":
+                    raise Exception("Failed to update enrollment number")
+            return enrollment_no
+        except BatchNotFoundException as e:
+            raise e
+        except UniqueViolationError as e:
+            details = e.as_dict()
+            if details["constraint_name"] == "uniq_student_student_id_batch_id":
+                raise StudentAlreadyExistsException(parameter="batch_id")
+            else:
+                raise e
+        except ForeignKeyViolationError as e:
+            details = e.as_dict()
+            match details["constraint_name"]:
+                case "fk_student_batch_student":
+                    raise StudentNotFoundException(parameter="student_id")
+                case "fk_student_batch_batch":
+                    raise BatchNotFoundException(parameter="batch_id")
+                case _:
+                    raise e
+
+    @staticmethod
+    async def get_enrollments(
+        connection: Connection,
+        student_id: UUID,
+    ) -> list[dict[str, Any]]:
+        records = await connection.fetch(
+            """--sql
+            SELECT student_batch.enrollment_no, batch.id AS batch_id, batch.name AS batch_name, 
+                batch.code as batch_code, batch.year as year, programs.name as program_name
+            FROM student_batch
+            INNER JOIN batch ON student_batch.batch_id = batch.id AND batch.is_active = TRUE
+            INNER JOIN programs ON batch.program_id = programs.id AND programs.is_active = TRUE
+            WHERE student_batch.student_id = $1 AND student_batch.is_active = TRUE;
+            """,
+            student_id,
+        )
+        return records
+
+    @staticmethod
+    async def delete_student_enrollment(
+        connection: Connection,
+        student_id: UUID,
+        batch_id: UUID,
+    ) -> None:
+        await connection.execute(
+            """--sql
+            UPDATE student_batch
+            SET is_active = FALSE
+            WHERE student_id = $1 AND batch_id = $2 AND is_active = TRUE;
+            """,
+            student_id,
+            batch_id,
+        )

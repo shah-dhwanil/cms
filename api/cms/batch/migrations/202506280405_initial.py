@@ -1,6 +1,6 @@
 
 # List of dependencies (migration that must be applied before this one)
-dependencies = []
+dependencies = ["programs.202506260323_initial"]
 
 # SQL to apply the migration
 apply = [
